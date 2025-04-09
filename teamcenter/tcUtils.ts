@@ -48,14 +48,25 @@ const handleDataError = (error: unknown, context: string): AppError => {
 // Constants
 export const SESSION_STORAGE_KEY = 'tc_session';
 
+// In-memory storage for Node.js environment
+let memoryStorage: Record<string, string> = {};
+
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
+
 /**
- * Store the Teamcenter session in browser storage
+ * Store the Teamcenter session in storage (browser sessionStorage or memory in Node.js)
  * @param session The session object to store
  */
 export const storeSession = (session: TCSession): void => {
   try {
-    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-    logger.debug('Teamcenter session stored in browser storage');
+    if (isBrowser) {
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+      logger.debug('Teamcenter session stored in browser storage');
+    } else {
+      memoryStorage[SESSION_STORAGE_KEY] = JSON.stringify(session);
+      logger.debug('Teamcenter session stored in memory (Node.js environment)');
+    }
   } catch (error) {
     logger.error('Failed to store Teamcenter session:', error);
     // Non-critical error, so we don't throw
@@ -63,34 +74,46 @@ export const storeSession = (session: TCSession): void => {
 };
 
 /**
- * Retrieve the Teamcenter session from browser storage
+ * Retrieve the Teamcenter session from storage (browser sessionStorage or memory in Node.js)
  * @returns The session object or null if not found or invalid
  */
 export const retrieveSession = (): TCSession | null => {
-  const storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
+  let storedSession: string | null = null;
+  
+  if (isBrowser) {
+    storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
+  } else {
+    storedSession = memoryStorage[SESSION_STORAGE_KEY] || null;
+  }
+  
   if (!storedSession) {
-    logger.debug('No Teamcenter session found in browser storage');
+    logger.debug('No Teamcenter session found in storage');
     return null;
   }
   
   try {
     const session = JSON.parse(storedSession) as TCSession;
-    logger.debug('Teamcenter session restored from browser storage');
+    logger.debug('Teamcenter session restored from storage');
     return session;
   } catch (error) {
     logger.error('Failed to parse stored Teamcenter session:', error);
     // Clear the invalid session data
-    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    clearSession();
     return null;
   }
 };
 
 /**
- * Clear the Teamcenter session from browser storage
+ * Clear the Teamcenter session from storage (browser sessionStorage or memory in Node.js)
  */
 export const clearSession = (): void => {
-  sessionStorage.removeItem(SESSION_STORAGE_KEY);
-  logger.debug('Teamcenter session cleared from browser storage');
+  if (isBrowser) {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    logger.debug('Teamcenter session cleared from browser storage');
+  } else {
+    delete memoryStorage[SESSION_STORAGE_KEY];
+    logger.debug('Teamcenter session cleared from memory (Node.js environment)');
+  }
 };
 
 /**

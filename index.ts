@@ -12,10 +12,48 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import * as dotenv from 'dotenv';
 
-// Import Teamcenter service modules
-import { TCCredentials, TCSearchOptions, TCObject, TCResponse } from '../services/teamcenter/types.js';
-import { teamcenterService as tcService } from '../services/teamcenter/teamcenterService.js';
-import { createSOAClient } from '../services/teamcenter/tcSOAClient.js';
+// Import Teamcenter types
+import { TCCredentials, TCSearchOptions, TCObject, TCResponse } from './teamcenter/types.js';
+import { createSOAClient } from './teamcenter/tcSOAClient.js';
+
+// Load environment variables from .env file for local testing
+dotenv.config();
+
+// Environment variables for Teamcenter configuration
+const TEAMCENTER_BASE_URL = process.env.TEAMCENTER_BASE_URL;
+const TEAMCENTER_USERNAME = process.env.TEAMCENTER_USERNAME;
+const TEAMCENTER_PASSWORD = process.env.TEAMCENTER_PASSWORD;
+const MOCK_MODE = process.env.MOCK_MODE === 'true';
+
+// Debug logging for environment variables
+console.log('Environment variables:');
+console.log('TEAMCENTER_BASE_URL:', TEAMCENTER_BASE_URL);
+console.log('TEAMCENTER_USERNAME:', TEAMCENTER_USERNAME);
+console.log('MOCK_MODE:', MOCK_MODE);
+
+if (!MOCK_MODE && (!TEAMCENTER_BASE_URL || !TEAMCENTER_USERNAME || !TEAMCENTER_PASSWORD)) {
+  throw new Error('Missing required environment variables for Teamcenter configuration. Set MOCK_MODE=true to use mock data.');
+}
+
+// Initialize Teamcenter configuration
+const teamcenterConfig = {
+  endpoint: MOCK_MODE ? 'http://localhost:8080/tc' : (TEAMCENTER_BASE_URL as string),
+  timeout: 60000,
+  withCredentials: true,
+  mode: 'cors' as RequestMode,
+  mockMode: MOCK_MODE
+};
+
+console.log(`Starting Teamcenter MCP server in ${MOCK_MODE ? 'MOCK' : 'REAL'} mode`);
+
+// Set up environment for teamcenterService
+(global as any).teamcenterConfig = teamcenterConfig;
+
+// Import Teamcenter service modules after setting global config
+import { teamcenterService, initTeamcenterService } from './teamcenter/teamcenterService.js';
+
+// Initialize the teamcenterService after setting global config
+initTeamcenterService();
 
 // Create a typed version of the teamcenterService with all the methods we need
 interface TeamcenterServiceInterface {
@@ -31,33 +69,10 @@ interface TeamcenterServiceInterface {
 }
 
 // Cast the teamcenterService to our interface
-const teamcenterService = tcService as unknown as TeamcenterServiceInterface;
-
-// Load environment variables from .env file for local testing
-dotenv.config();
-
-// Environment variables for Teamcenter configuration
-const TEAMCENTER_BASE_URL = process.env.TEAMCENTER_BASE_URL;
-const TEAMCENTER_USERNAME = process.env.TEAMCENTER_USERNAME;
-const TEAMCENTER_PASSWORD = process.env.TEAMCENTER_PASSWORD;
-
-if (!TEAMCENTER_BASE_URL || !TEAMCENTER_USERNAME || !TEAMCENTER_PASSWORD) {
-  throw new Error('Missing required environment variables for Teamcenter configuration');
-}
-
-// Initialize Teamcenter configuration
-const teamcenterConfig = {
-  endpoint: TEAMCENTER_BASE_URL,
-  timeout: 60000,
-  withCredentials: true,
-  mode: 'cors' as RequestMode
-};
-
-// Set up environment for teamcenterService
-(global as any).teamcenterConfig = teamcenterConfig;
+const typedTeamcenterService = teamcenterService as unknown as TeamcenterServiceInterface;
 
 // Add missing methods to teamcenterService if they don't exist
-if (!('getItemTypes' in tcService)) {
+if (!('getItemTypes' in typedTeamcenterService)) {
   teamcenterService.getItemTypes = async (): Promise<TCResponse<any>> => {
     try {
       const soaClient = createSOAClient(teamcenterConfig);
@@ -80,7 +95,7 @@ if (!('getItemTypes' in tcService)) {
   };
 }
 
-if (!('getItemById' in tcService)) {
+if (!('getItemById' in typedTeamcenterService)) {
   teamcenterService.getItemById = async (itemId: string): Promise<TCResponse<any>> => {
     try {
       const soaClient = createSOAClient(teamcenterConfig);
@@ -103,7 +118,7 @@ if (!('getItemById' in tcService)) {
   };
 }
 
-if (!('searchItems' in tcService)) {
+if (!('searchItems' in typedTeamcenterService)) {
   teamcenterService.searchItems = async (query: string, type?: string, limit: number = 10): Promise<TCResponse<TCObject[]>> => {
     try {
       const soaClient = createSOAClient(teamcenterConfig);
@@ -175,7 +190,7 @@ if (!('searchItems' in tcService)) {
   };
 }
 
-if (!('createItem' in tcService)) {
+if (!('createItem' in typedTeamcenterService)) {
   teamcenterService.createItem = async (type: string, name: string, description: string, properties: Record<string, any> = {}): Promise<TCResponse<any>> => {
     try {
       const soaClient = createSOAClient(teamcenterConfig);
@@ -209,7 +224,7 @@ if (!('createItem' in tcService)) {
   };
 }
 
-if (!('updateItem' in tcService)) {
+if (!('updateItem' in typedTeamcenterService)) {
   teamcenterService.updateItem = async (itemId: string, properties: Record<string, any>): Promise<TCResponse<any>> => {
     try {
       const soaClient = createSOAClient(teamcenterConfig);
@@ -307,7 +322,7 @@ class TeamcenterServer {
         // Item types resource
         if (request.params.uri === 'teamcenter://item-types') {
           // Use the teamcenterService to get item types
-          const response = await teamcenterService.getItemTypes();
+          const response = await typedTeamcenterService.getItemTypes();
           
           if (response.error) {
             throw new McpError(ErrorCode.InternalError, response.error.message);
@@ -330,7 +345,7 @@ class TeamcenterServer {
           const itemId = decodeURIComponent(itemMatch[1]);
           
           // Use the teamcenterService to get item details
-          const response = await teamcenterService.getItemById(itemId);
+          const response = await typedTeamcenterService.getItemById(itemId);
           
           if (response.error) {
             throw new McpError(ErrorCode.InternalError, response.error.message);
@@ -353,7 +368,7 @@ class TeamcenterServer {
           const query = decodeURIComponent(searchMatch[1]);
           
           // Use the teamcenterService to search for items
-          const response = await teamcenterService.searchItems(query);
+          const response = await typedTeamcenterService.searchItems(query);
           
           if (response.error) {
             throw new McpError(ErrorCode.InternalError, response.error.message);
@@ -536,6 +551,7 @@ class TeamcenterServer {
               throw new McpError(ErrorCode.InvalidParams, 'Username and password are required');
             }
             
+            // Create credentials object matching TCCredentials interface
             const credentials: TCCredentials = { username, password };
             const response = await teamcenterService.login(credentials);
             
@@ -597,7 +613,7 @@ class TeamcenterServer {
               throw new McpError(ErrorCode.InvalidParams, 'Query parameter is required');
             }
             
-            const response = await teamcenterService.searchItems(query, type, limit);
+            const response = await typedTeamcenterService.searchItems(query, type, limit);
             
             if (response.error) {
               return {
@@ -628,7 +644,7 @@ class TeamcenterServer {
               throw new McpError(ErrorCode.InvalidParams, 'Item ID is required');
             }
             
-            const response = await teamcenterService.getItemById(id);
+            const response = await typedTeamcenterService.getItemById(id);
             
             if (response.error) {
               return {
@@ -664,7 +680,7 @@ class TeamcenterServer {
               throw new McpError(ErrorCode.InvalidParams, 'Type and name parameters are required');
             }
             
-            const response = await teamcenterService.createItem(type, name, description, properties);
+            const response = await typedTeamcenterService.createItem(type, name, description, properties);
             
             if (response.error) {
               return {
@@ -698,7 +714,7 @@ class TeamcenterServer {
               throw new McpError(ErrorCode.InvalidParams, 'Item ID and properties are required');
             }
             
-            const response = await teamcenterService.updateItem(id, properties);
+            const response = await typedTeamcenterService.updateItem(id, properties);
             
             if (response.error) {
               return {
@@ -723,7 +739,7 @@ class TeamcenterServer {
           }
           
           case 'get_item_types': {
-            const response = await teamcenterService.getItemTypes();
+            const response = await typedTeamcenterService.getItemTypes();
             
             if (response.error) {
               return {
@@ -821,19 +837,23 @@ class TeamcenterServer {
 
   async run() {
     try {
-      // Test authentication on startup
-      const credentials: TCCredentials = {
-        username: TEAMCENTER_USERNAME!,
-        password: TEAMCENTER_PASSWORD!
-      };
-      
-      const loginResponse = await teamcenterService.login(credentials);
-      
-      if (loginResponse.error) {
-        throw new Error(`Authentication failed: ${loginResponse.error.message}`);
+      if (!MOCK_MODE) {
+        // Test authentication on startup in real mode
+        const credentials: TCCredentials = {
+          username: TEAMCENTER_USERNAME!,
+          password: TEAMCENTER_PASSWORD!
+        };
+        
+        const loginResponse = await teamcenterService.login(credentials);
+        
+        if (loginResponse.error) {
+          throw new Error(`Authentication failed: ${loginResponse.error.message}`);
+        }
+        
+        console.error('Successfully authenticated with Teamcenter');
+      } else {
+        console.error('Running in MOCK mode - no authentication required');
       }
-      
-      console.error('Successfully authenticated with Teamcenter');
       
       const transport = new StdioServerTransport();
       await this.server.connect(transport);

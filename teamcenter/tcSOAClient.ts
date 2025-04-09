@@ -1,6 +1,7 @@
 
 import { TCSOAClientConfig } from './types.js';
 import { realCallService } from './tcApiService.js';
+import { mockCallService } from './tcMockService.js';
 
 export interface SOAClient {
   config: TCSOAClientConfig;
@@ -25,10 +26,13 @@ export const createSOAClient = (
       sessionId = value;
     },
     
-    // Service call method that routes to the real implementation
+    // Service call method that routes to the real or mock implementation
     callService: async (service: string, operation: string, params: unknown): Promise<unknown> => {
       try {
-        const result = await realCallService(config, sessionId, service, operation, params);
+        // Use mock service if mockMode is enabled
+        const result = config.mockMode 
+          ? await mockCallService(service, operation, params)
+          : await realCallService(config, sessionId, service, operation, params);
         
         // Handle response to extract session ID if available
         if (typeof result === 'object' && result !== null) {

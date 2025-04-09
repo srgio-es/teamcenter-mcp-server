@@ -101,6 +101,7 @@ export interface TCSOAClientConfig {
   headers?: Record<string, string>;
   withCredentials?: boolean;
   mode?: RequestMode; // Added mode property to accept RequestMode type
+  mockMode?: boolean; // Flag to use mock service instead of real API
 }
 
 // Types for SOA service operations

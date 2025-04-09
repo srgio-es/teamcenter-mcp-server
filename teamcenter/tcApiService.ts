@@ -52,6 +52,12 @@ const handleApiError = (error: unknown, context: string): AppError => {
  * @returns The ASP.NET_SessionId cookie value or null if not found
  */
 const getAspNetSessionId = (): string | null => {
+  // Check if we're in a browser environment
+  if (typeof document === 'undefined' || !document.cookie) {
+    logger.debug('Not in browser environment, no cookies available');
+    return null;
+  }
+  
   const cookies = document.cookie.split(';');
   for (const cookie of cookies) {
     const [name, value] = cookie.trim().split('=');
@@ -114,8 +120,10 @@ export const realCallService = async (
       headers['Cookie'] = `ASP.NET_SessionId=${aspNetSessionId}`;
     }
     
-    // Log cookies for debugging
-    logger.debug('Current cookies:', document.cookie);
+    // Log cookies for debugging (only in browser environment)
+    if (typeof document !== 'undefined' && document.cookie) {
+      logger.debug('Current cookies:', document.cookie);
+    }
     logger.debug('Request headers:', headers);
     
     // Set up fetch options with timeout
@@ -125,15 +133,24 @@ export const realCallService = async (
     // Make the fetch request with explicit CORS configuration
     let response;
     try {
-      response = await fetch(endpoint, {
+      // Check if we're in a Node.js environment and need to use node-fetch
+      const fetchOptions = {
         method: 'POST',
         headers,
         body: JSON.stringify(jsonRequestBody),
-        credentials: 'include', // Always include credentials (cookies)
-        mode: 'cors', // Explicitly specify CORS mode
-        cache: 'no-cache', // Prevent caching issues with session cookies
         signal: controller.signal // For timeout handling
-      });
+      };
+      
+      // Add browser-specific options only in browser environment
+      if (typeof window !== 'undefined') {
+        Object.assign(fetchOptions, {
+          credentials: 'include', // Always include credentials (cookies)
+          mode: config.mode || 'cors', // Explicitly specify CORS mode
+          cache: 'no-cache' // Prevent caching issues with session cookies
+        });
+      }
+      
+      response = await fetch(endpoint, fetchOptions);
       
       // Clear the timeout
       clearTimeout(timeoutId);
@@ -180,7 +197,8 @@ export const realCallService = async (
       clearTimeout(timeoutId);
       
       // Handle abort error (timeout)
-      if (error instanceof DOMException && error.name === 'AbortError') {
+      if ((typeof DOMException !== 'undefined' && error instanceof DOMException && error.name === 'AbortError') ||
+          (error instanceof Error && error.name === 'AbortError')) {
         throw new AppError(
           `Request timeout after ${config.timeout || 60000}ms`,
           ErrorType.API_TIMEOUT,

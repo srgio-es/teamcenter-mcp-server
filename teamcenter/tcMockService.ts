@@ -14,10 +14,26 @@ export const mockCallService = async (
   
   // Mock responses based on service and operation
   if (service === 'Core-2011-06-Session' && operation === 'login') {
-    const credentials = (params as { credentials: { user: string; password: string } }).credentials;
+    // Handle both direct credentials and wrapped credentials formats
+    let user, password;
+    
+    if ((params as any).credentials) {
+      // Format from createJSONRequest: { credentials: { user, password, ... } }
+      user = (params as { credentials: { user: string; password: string } }).credentials.user;
+      password = (params as { credentials: { user: string; password: string } }).credentials.password;
+    } else if ((params as any).body && (params as any).body.credentials) {
+      // Format from request envelope: { body: { credentials: { user, password, ... } } }
+      user = (params as { body: { credentials: { user: string; password: string } } }).body.credentials.user;
+      password = (params as { body: { credentials: { user: string; password: string } } }).body.credentials.password;
+    } else {
+      // Direct format: { username, password }
+      user = (params as { username: string; password: string }).username;
+      password = (params as { username: string; password: string }).password;
+    }
+    
     // Always accept admin/admin, but credentials with matching username/password also work in mock mode
-    if ((credentials.user === 'admin' && credentials.password === 'admin') ||
-        (credentials.user === credentials.password)) {
+    if ((user === 'admin' && password === 'admin') ||
+        (user === password)) {
       return {
         serverInfo: {
           version: "14.0.0.0",
@@ -25,8 +41,8 @@ export const mockCallService = async (
           hostName: "localhost"
         },
         sessionId: 'mock-session-123',
-        userId: credentials.user,
-        userName: credentials.user === 'admin' ? 'Administrator' : credentials.user,
+        userId: user,
+        userName: user === 'admin' ? 'Administrator' : user,
         groupId: 'group-1',
         groupName: 'Engineering',
         roleId: 'role-1',

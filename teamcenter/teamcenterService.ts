@@ -24,11 +24,27 @@ const defaultTeamcenterConfig = {
   mode: 'cors' as RequestMode
 };
 
-// Get teamcenterConfig from global or use default
-const teamcenterConfig = (globalThis as any).teamcenterConfig || defaultTeamcenterConfig;
+// Function to get teamcenterConfig from global or use default
+const getTeamcenterConfig = () => {
+  // Always check the global config first
+  if ((globalThis as any).teamcenterConfig) {
+    console.log('Getting teamcenterConfig from global:', (globalThis as any).teamcenterConfig);
+    return (globalThis as any).teamcenterConfig;
+  }
+  
+  console.log('Using default teamcenterConfig:', defaultTeamcenterConfig);
+  return defaultTeamcenterConfig;
+};
 
 class TeamcenterService {
   private soaClient: SOAClient | null = null;
+  
+  // Add missing method declarations
+  getItemTypes?: () => Promise<TCResponse<any>>;
+  getItemById?: (itemId: string) => Promise<TCResponse<any>>;
+  searchItems?: (query: string, type?: string, limit?: number) => Promise<TCResponse<TCObject[]>>;
+  createItem?: (type: string, name: string, description: string, properties?: Record<string, any>) => Promise<TCResponse<any>>;
+  updateItem?: (itemId: string, properties: Record<string, any>) => Promise<TCResponse<any>>;
   
   constructor() {
     this.initService();
@@ -40,7 +56,7 @@ class TeamcenterService {
     const sessionId = session?.sessionId || null;
     
     // Initialize the SOA client (no mock mode)
-    this.soaClient = createSOAClient(teamcenterConfig, sessionId);
+    this.soaClient = createSOAClient(getTeamcenterConfig(), sessionId);
     
     if (sessionId) {
       console.log('Teamcenter session restored from browser storage');
@@ -269,5 +285,14 @@ class TeamcenterService {
   }
 }
 
-// Export singleton instance
-export const teamcenterService = new TeamcenterService();
+// Export a function to create the TeamcenterService instance
+export const createTeamcenterService = () => new TeamcenterService();
+
+// Export singleton instance (will be initialized in index.ts after setting global config)
+export let teamcenterService: TeamcenterService;
+
+// Initialize the teamcenterService
+export const initTeamcenterService = () => {
+  teamcenterService = new TeamcenterService();
+  return teamcenterService;
+};
