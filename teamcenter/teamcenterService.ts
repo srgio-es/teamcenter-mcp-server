@@ -57,6 +57,9 @@ class TeamcenterService {
   }
 
   async login(credentials: TCCredentials): Promise<TCResponse<TCSession>> {
+    const serviceRequestId = `service_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    logger.debug(`[${serviceRequestId}] TeamcenterService.login called for user: ${credentials.username}`);
+    
     try {
       if (!this.soaClient) {
         throw new Error('SOA client is not initialized');
@@ -72,9 +75,10 @@ class TeamcenterService {
       // Store session
       storeSession(session);
       
+      logger.debug(`[${serviceRequestId}] TeamcenterService.login successful for user: ${credentials.username}`);
       return { data: session };
     } catch (error) {
-      logger.error('Teamcenter login error:', error);
+      logger.error(`[${serviceRequestId}] Teamcenter login error:`, error);
       return {
         error: {
           code: 'LOGIN_ERROR',
@@ -86,7 +90,11 @@ class TeamcenterService {
   }
 
   async getUserOwnedItems(): Promise<TCResponse<TCObject[]>> {
+    const serviceRequestId = `service_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    logger.debug(`[${serviceRequestId}] TeamcenterService.getUserOwnedItems called`);
+    
     if (!this.soaClient?.sessionId) {
+      logger.debug(`[${serviceRequestId}] TeamcenterService.getUserOwnedItems failed: No session`);
       return {
         error: {
           code: 'NO_SESSION',
@@ -149,9 +157,10 @@ class TeamcenterService {
       ) as TCSearchResponse;
 
       const tcObjects = response.objects?.map(obj => convertToTCObject(obj)) || [];
+      logger.debug(`[${serviceRequestId}] TeamcenterService.getUserOwnedItems successful: ${tcObjects.length} items found`);
       return { data: tcObjects };
     } catch (error) {
-      logger.error('Error fetching user owned items:', error);
+      logger.error(`[${serviceRequestId}] Error fetching user owned items:`, error);
       return {
         error: {
           code: 'SEARCH_ERROR',
@@ -163,7 +172,11 @@ class TeamcenterService {
   }
 
   async getLastCreatedItems(limit: number = 10): Promise<TCResponse<TCObject[]>> {
+    const serviceRequestId = `service_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    logger.debug(`[${serviceRequestId}] TeamcenterService.getLastCreatedItems called with limit: ${limit}`);
+    
     if (!this.soaClient?.sessionId) {
+      logger.debug(`[${serviceRequestId}] TeamcenterService.getLastCreatedItems failed: No session`);
       return {
         error: {
           code: 'NO_SESSION',
@@ -227,9 +240,10 @@ class TeamcenterService {
       ) as TCSearchResponse;
 
       const tcObjects = response.objects?.map(obj => convertToTCObject(obj)) || [];
+      logger.debug(`[${serviceRequestId}] TeamcenterService.getLastCreatedItems successful: ${tcObjects.length} items found`);
       return { data: tcObjects };
     } catch (error) {
-      logger.error('Error fetching last created items:', error);
+      logger.error(`[${serviceRequestId}] Error fetching last created items:`, error);
       return {
         error: {
           code: 'SEARCH_ERROR',
@@ -245,7 +259,11 @@ class TeamcenterService {
   }
 
   async logout(): Promise<TCResponse<void>> {
+    const serviceRequestId = `service_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    logger.debug(`[${serviceRequestId}] TeamcenterService.logout called`);
+    
     if (!this.soaClient?.sessionId) {
+      logger.debug(`[${serviceRequestId}] TeamcenterService.logout: No active session to logout`);
       return { data: undefined };
     }
 
@@ -264,9 +282,10 @@ class TeamcenterService {
       clearSession();
       this.soaClient.sessionId = null;
       
+      logger.debug(`[${serviceRequestId}] TeamcenterService.logout successful`);
       return { data: undefined };
     } catch (error) {
-      logger.error('Teamcenter logout error:', error);
+      logger.error(`[${serviceRequestId}] Teamcenter logout error:`, error);
       return {
         error: {
           code: 'LOGOUT_ERROR',

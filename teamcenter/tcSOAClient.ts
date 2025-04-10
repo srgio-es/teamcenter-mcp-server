@@ -47,6 +47,10 @@ export const createSOAClient = (
     
     // Service call method that routes to the real or mock implementation
     callService: async (service: string, operation: string, params: unknown): Promise<unknown> => {
+      // Generate a unique request ID for client-level tracing
+      const clientRequestId = `client_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      logger.debug(`[${clientRequestId}] SOA client call: ${service}.${operation}`);
+      
       try {
         // Use mock service if mockMode is enabled
         const result = config.mockMode 
@@ -68,16 +72,19 @@ export const createSOAClient = (
             // Also update the session cookie
             const cookieName = 'ASP.NET_SessionId';
             storeSessionCookie(cookieName, resultObj.sessionId);
-            logger.debug(`Session ID updated: ${sessionId}`);
+            logger.debug(`[${clientRequestId}] Session ID updated: ${sessionId}`);
           }
+          
+          logger.debug(`[${clientRequestId}] SOA client response received for: ${service}.${operation}`);
           
           // Return just the data part for consistency
           return resultObj.data;
         }
         
+        logger.debug(`[${clientRequestId}] SOA client response received for: ${service}.${operation}`);
         return result;
       } catch (error) {
-        logger.error(`SOA client error (${service}.${operation}):`, error);
+        logger.error(`[${clientRequestId}] SOA client error (${service}.${operation}):`, error);
         throw error;
       }
     }

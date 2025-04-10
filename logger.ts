@@ -19,7 +19,9 @@ const logFormat = winston.format.combine(
   winston.format.splat(),
   winston.format.printf(({ level, message, timestamp, ...meta }) => {
     const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
-    return `${timestamp} [${level.toUpperCase()}]: ${message}${metaStr}`;
+    // Ensure level is a string before calling toUpperCase
+    const levelStr = typeof level === 'string' ? level.toUpperCase() : String(level).toUpperCase();
+    return `${timestamp} [${levelStr}]: ${message}${metaStr}`;
   })
 );
 
@@ -56,6 +58,34 @@ if (process.env.ENABLE_CONSOLE_LOGGING === 'true') {
   }));
 }
 
+// Utility function to log requests and responses
+const logTeamcenterRequest = (service: string, operation: string, params: unknown, requestId?: string) => {
+  const reqId = requestId || `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  
+  // Mask sensitive data like passwords
+  let sanitizedParams = JSON.parse(JSON.stringify(params || {}));
+  if (service === 'Core-2011-06-Session' && operation === 'login') {
+    if (sanitizedParams.credentials?.password) {
+      sanitizedParams.credentials.password = '***';
+    } else if (sanitizedParams.password) {
+      sanitizedParams.password = '***';
+    } else if (sanitizedParams.body?.credentials?.password) {
+      sanitizedParams.body.credentials.password = '***';
+    }
+  }
+  
+  logger.info(`[${reqId}] TC REQUEST: ${service}.${operation}`, { params: sanitizedParams });
+  return reqId;
+};
+
+const logTeamcenterResponse = (service: string, operation: string, response: unknown, requestId: string, error?: Error) => {
+  if (error) {
+    logger.error(`[${requestId}] TC RESPONSE ERROR: ${service}.${operation}`, { error: error.message, stack: error.stack });
+  } else {
+    logger.info(`[${requestId}] TC RESPONSE: ${service}.${operation}`, { response });
+  }
+};
+
 // Export a wrapper with typed methods
 export default {
   error: (message: string, ...meta: any[]) => {
@@ -71,5 +101,8 @@ export default {
     logger.debug(message, ...meta);
   },
   // Method to get the log file path (useful for diagnostics)
-  getLogFilePath: () => logFilePath
+  getLogFilePath: () => logFilePath,
+  // Teamcenter request/response logging
+  logTeamcenterRequest,
+  logTeamcenterResponse
 };

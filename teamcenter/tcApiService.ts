@@ -59,12 +59,15 @@ export const realCallService = async (
   // Form the REST endpoint URL
   const endpoint = `${config.endpoint}/${service}/${operation}`;
   
+  // Generate a unique request ID for tracing
+  const requestId = logger.logTeamcenterRequest(service, operation, params);
+  
   try {
-    logger.info(`Making Teamcenter API call to: ${endpoint}`);
+    logger.info(`[${requestId}] Making Teamcenter API call to: ${endpoint}`);
     
     if (service === 'Core-2011-06-Session' && operation === 'login') {
       const credentials = params as { username: string; password: string };
-      logger.info('Login request received', { username: credentials.username });
+      logger.info(`[${requestId}] Login request received`, { username: credentials.username });
     }
     
     // Create JSON request body with the proper envelope structure
@@ -213,12 +216,28 @@ export const realCallService = async (
     let jsonData;
     try {
       jsonData = await response.json();
-      logger.debug(`${service}.${operation} response received`);
+      logger.debug(`[${requestId}] ${service}.${operation} response received`);
       
       // Debug log the response data
-      logger.debug('Response data:', jsonData);
+      logger.debug(`[${requestId}] Response data:`, jsonData);
+      
+      // Parse the response
+      const parsedData = parseJSONResponse(service, operation, jsonData as Record<string, unknown>);
+      
+      // Log the parsed response
+      logger.logTeamcenterResponse(service, operation, parsedData, requestId);
+      
+      // Extract data from the response
+      return {
+        data: parsedData,
+        headers: response.headers,
+        sessionId: newSessionId
+      };
     } catch (error) {
-      logger.error('Failed to parse JSON response:', error);
+      logger.error(`[${requestId}] Failed to parse JSON response:`, error);
+      logger.logTeamcenterResponse(service, operation, null, requestId, 
+        error instanceof Error ? error : new Error('Failed to parse response as JSON'));
+      
       throw new AppError(
         'Failed to parse response as JSON',
         ErrorType.DATA_PARSING,
@@ -226,22 +245,17 @@ export const realCallService = async (
         { service, operation }
       );
     }
-    
-    // Extract data from the response
-    return {
-      data: parseJSONResponse(service, operation, jsonData as Record<string, unknown>),
-      headers: response.headers,
-      sessionId: newSessionId
-    };
   } catch (error) {
     // Handle and log the error
     if (error instanceof AppError) {
       // Already an AppError, just log it
-      logger.error(`${error.type} Error in ${service}.${operation}: ${error.message}`);
+      logger.error(`[${requestId}] ${error.type} Error in ${service}.${operation}: ${error.message}`);
+      logger.logTeamcenterResponse(service, operation, null, requestId, error);
       throw error;
     } else {
       // Convert to AppError and log
       const apiError = handleApiError(error, `${service}.${operation}`);
+      logger.logTeamcenterResponse(service, operation, null, requestId, apiError);
       throw apiError;
     }
   }

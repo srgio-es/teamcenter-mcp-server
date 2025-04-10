@@ -8,7 +8,10 @@ export const mockCallService = async (
   operation: string, 
   params: unknown
 ): Promise<unknown> => {
-  logger.debug(`SOA call (MOCK MODE): ${service}.${operation}`, params);
+  // Generate a unique request ID for tracing
+  const requestId = logger.logTeamcenterRequest(service, operation, params);
+  
+  logger.debug(`[${requestId}] SOA call (MOCK MODE): ${service}.${operation}`, params);
   
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -35,7 +38,7 @@ export const mockCallService = async (
     // Always accept admin/admin, but credentials with matching username/password also work in mock mode
     if ((user === 'admin' && password === 'admin') ||
         (user === password)) {
-      return {
+      const response = {
         serverInfo: {
           version: "14.0.0.0",
           instanceName: "Mock TC Server",
@@ -49,12 +52,22 @@ export const mockCallService = async (
         roleId: 'role-1',
         roleName: 'Engineer'
       };
+      
+      // Log the mock response
+      logger.logTeamcenterResponse(service, operation, response, requestId);
+      
+      return response;
     }
     throw new Error('Invalid credentials');
   }
   
   if (service === 'Core-2007-06-Session' && operation === 'logout') {
-    return { success: true };
+    const response = { success: true };
+    
+    // Log the mock response
+    logger.logTeamcenterResponse(service, operation, response, requestId);
+    
+    return response;
   }
   
   if (service === 'Query-2012-10-Finder' && operation === 'performSearch') {
@@ -124,7 +137,7 @@ export const mockCallService = async (
       }
     ];
     
-    return {
+    const response = {
       searchResults: mockItems,
       totalFound: mockItems.length,
       totalLoaded: mockItems.length,
@@ -163,7 +176,17 @@ export const mockCallService = async (
       // Keep objects for backward compatibility
       objects: mockItems
     };
+    
+    // Log the mock response
+    logger.logTeamcenterResponse(service, operation, response, requestId);
+    
+    return response;
   }
   
-  throw new Error(`Unimplemented SOA service: ${service}.${operation}`);
+  const error = new Error(`Unimplemented SOA service: ${service}.${operation}`);
+  
+  // Log the error response
+  logger.logTeamcenterResponse(service, operation, null, requestId, error);
+  
+  throw error;
 };

@@ -66,6 +66,7 @@ export const storeSessionCookie = (name: string, value: string): void => {
  * @returns The session cookie object or null if not set
  */
 export const getSessionCookie = (): SessionCookie | null => {
+  logger.debug(`Retrieved cookie stored with name: ${sessionCookie?.name} and value: ${sessionCookie?.value}`);
   return sessionCookie;
 };
 
@@ -154,6 +155,9 @@ export const isValidSession = (session: TCSession | null): boolean => {
  * @returns The formatted request envelope
  */
 export const createJSONRequest = (service: string, operation: string, params: unknown): Record<string, unknown> => {
+  const requestId = `request_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  logger.debug(`[${requestId}] Creating JSON request envelope for ${service}.${operation}`);
+  
   try {
     // Create the standard header object
     const header = {
@@ -187,7 +191,7 @@ export const createJSONRequest = (service: string, operation: string, params: un
         );
       }
       
-      logger.debug('Creating login request for user:', credentials.username);
+      logger.debug(`[${requestId}] Creating login request for user: ${credentials.username}`);
       
       requestEnvelope.body = {
         credentials: {
@@ -202,15 +206,15 @@ export const createJSONRequest = (service: string, operation: string, params: un
     } else if (service === 'Core-2007-06-Session' && operation === 'logout') {
       // Empty body for logout
       requestEnvelope.body = {};
-      logger.debug('Creating logout request');
+      logger.debug(`[${requestId}] Creating logout request`);
     } else if (service === 'Query-2012-10-Finder' && operation === 'performSearch') {
       // Add the search parameters to the body
       requestEnvelope.body = params;
-      logger.debug('Creating search request');
+      logger.debug(`[${requestId}] Creating search request`);
     } else {
       // For other operations, put the params directly in the body
       requestEnvelope.body = params;
-      logger.debug(`Creating request for ${service}.${operation}`);
+      logger.debug(`[${requestId}] Creating request for ${service}.${operation}`);
     }
     
     // Debug logging for request envelope (with password masking)
@@ -219,7 +223,7 @@ export const createJSONRequest = (service: string, operation: string, params: un
         debugEnvelope.body?.credentials?.password) {
       debugEnvelope.body.credentials.password = '***';
     }
-    logger.debug('Request envelope:', debugEnvelope);
+    logger.debug(`[${requestId}] Request envelope:`, debugEnvelope);
     
     return requestEnvelope;
   } catch (error) {
