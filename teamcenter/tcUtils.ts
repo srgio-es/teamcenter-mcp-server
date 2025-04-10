@@ -84,14 +84,20 @@ export const clearSessionCookie = (): void => {
  */
 export const storeSession = (session: TCSession): void => {
   try {
-    // Store the session ID in memory
-    if (session.sessionId) {
+    // Check if we already have a session cookie
+    const existingCookie = getSessionCookie();
+    
+    // Only store the session ID if we don't already have a cookie
+    // This ensures we don't overwrite the cookie-based session ID with the one from the response body
+    if (!existingCookie && session.sessionId) {
       // Determine which cookie name to use based on the server type
       // This is a heuristic - we'll prefer ASP.NET_SessionId by default
       // but could be configured based on server response headers
       const cookieName = ASPNET_SESSIONID_COOKIE;
       storeSessionCookie(cookieName, session.sessionId);
-      logger.debug(`Stored session ID as ${cookieName}`);
+      logger.debug(`No cookie found, storing session ID as ${cookieName}`);
+    } else if (existingCookie) {
+      logger.debug(`Keeping existing cookie: ${existingCookie.name}=${existingCookie.value}`);
     }
   } catch (error) {
     logger.error('Failed to store Teamcenter session:', error);

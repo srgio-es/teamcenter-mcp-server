@@ -174,13 +174,15 @@ export const realCallService = async (
     const contentType = response.headers.get('content-type');
     
     // Extract session ID from authorization header if present
+    // Note: We're still extracting this for logging purposes, but the cookie-based session ID
+    // will be prioritized in tcSOAClient.ts
     newSessionId = response.headers.get('Authorization') || 
                   response.headers.get('X-Siemens-Session-ID') || 
                   response.headers.get('Tc-Session-ID');
     
     logger.debug('Response content type:', contentType);
     if (newSessionId) {
-      logger.debug('Session ID found in headers');
+      logger.debug('Session ID found in headers (will be used as fallback only)');
     }
     
     // Check for session cookies in the response

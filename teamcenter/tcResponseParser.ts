@@ -3,8 +3,12 @@ import logger from '../logger.js';
 
 // Parse the JSON response based on the service and operation
 export const parseJSONResponse = (service: string, operation: string, response: Record<string, unknown>): unknown => {
+  const parserRequestId = `parser_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  logger.debug(`[${parserRequestId}] Parsing response for ${service}.${operation}`);
+  
   // Handle different API responses based on the service and operation
   if (service === 'Core-2006-03-Session' && operation === 'login') {
+    logger.debug(`[${parserRequestId}] Parsing legacy login response`);
     // Handle legacy login response
     const userId = response['userId'] as string || '';
     const userName = response['userName'] as string || '';
@@ -29,11 +33,13 @@ export const parseJSONResponse = (service: string, operation: string, response: 
       serverInfo: undefined
     };
     
+    logger.debug(`[${parserRequestId}] Parsed legacy login response for user: ${userId}`);
     return sessionObject;
   }
   
   // Parse based on the operation
   if (service === 'Core-2011-06-Session' && operation === 'login') {
+    logger.debug(`[${parserRequestId}] Parsing new login response format`);
     // Handle the new login response format
     // First, ensure the response is in the expected format
     const loginResponseObj = response as Record<string, any>;
@@ -55,10 +61,12 @@ export const parseJSONResponse = (service: string, operation: string, response: 
       serverInfo: loginResponseObj.serverInfo
     };
     
+    logger.debug(`[${parserRequestId}] Parsed new login response for user: ${sessionObject.userId}`);
     return sessionObject;
   }
   
   if ((service === 'Core-2007-06-Session' || service === 'Core-2008-06-Session') && operation === 'logout') {
+    logger.debug(`[${parserRequestId}] Parsing logout response`);
     // Handle logout response, typically just return success
     return { status: 'OK' };
   }
@@ -90,21 +98,25 @@ export const parseJSONResponse = (service: string, operation: string, response: 
       }))
     };
     
+    logger.debug(`[${parserRequestId}] Parsed search response with ${searchResponse.totalFound} results`);
     return searchResponse;
   }
   
   // Default response handling for unimplemented operations
-  logger.warn(`Unimplemented JSON response parsing for service: ${service}.${operation}`);
+  logger.warn(`[${parserRequestId}] Unimplemented JSON response parsing for service: ${service}.${operation}`);
   return response;
 };
 
 // Convert a Teamcenter API object to a standardized TCObject
 export const convertToTCObject = (itemObj: TCItem): TCObject => {
+  const convertRequestId = `convert_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  logger.debug(`[${convertRequestId}] Converting Teamcenter item to TCObject: ${itemObj.uid}`);
+  
   // Extract the basic properties
   const props = itemObj.properties || {};
   
   // Map common properties to our standardized object format
-  return {
+  const tcObject = {
     id: itemObj.uid || (props.item_id as string) || '',
     name: (props.object_name as string) || '',
     type: itemObj.type || 'Unknown',
@@ -115,6 +127,9 @@ export const convertToTCObject = (itemObj: TCItem): TCObject => {
     description: (props.object_desc as string) || '',
     title: (props.object_string as string) || '',
   };
+  
+  logger.debug(`[${convertRequestId}] Converted item ${tcObject.id} (${tcObject.name})`);
+  return tcObject;
 };
 
 // Helper function to determine item status
