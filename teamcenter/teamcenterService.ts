@@ -254,6 +254,86 @@ class TeamcenterService {
     }
   }
 
+  async getSessionInfo(): Promise<TCResponse<any>> {
+    const serviceRequestId = `service_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    logger.debug(`[${serviceRequestId}] TeamcenterService.getSessionInfo called`);
+
+    if (!this.soaClient?.sessionId) {
+      logger.debug(`[${serviceRequestId}] TeamcenterService.getSessionInfo failed: No session`);
+      return {
+        error: {
+          code: 'NO_SESSION',
+          level: 'ERROR',
+          message: 'User is not logged in'
+        }
+      };
+    }
+
+    try {
+      if (!this.soaClient) {
+        throw new Error('SOA client is not initialized');
+      }
+
+      const result = await this.soaClient.callService(
+        'Core-2007-01-Session',
+        'getTCSessionInfo',
+        {}
+      );
+
+      logger.debug(`[${serviceRequestId}] TeamcenterService.getSessionInfo successful`);
+      return { data: result };
+    } catch (error) {
+      logger.error(`[${serviceRequestId}] Error getting session info:`, error);
+      return {
+        error: {
+          code: 'SESSION_INFO_ERROR',
+          level: 'ERROR',
+          message: error instanceof Error ? error.message : 'Failed to retrieve session info'
+        }
+      };
+    }
+  }
+
+  async getFavorites(): Promise<TCResponse<any>> {
+    const serviceRequestId = `service_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    logger.debug(`[${serviceRequestId}] TeamcenterService.getFavorites called`);
+
+    if (!this.soaClient?.sessionId) {
+      logger.debug(`[${serviceRequestId}] TeamcenterService.getFavorites failed: No session`);
+      return {
+        error: {
+          code: 'NO_SESSION',
+          level: 'ERROR',
+          message: 'User is not logged in'
+        }
+      };
+    }
+
+    try {
+      if (!this.soaClient) {
+        throw new Error('SOA client is not initialized');
+      }
+
+      const result = await this.soaClient.callService(
+        'Core-2008-03-Session',
+        'getFavorites',
+        {}
+      );
+
+      logger.debug(`[${serviceRequestId}] TeamcenterService.getFavorites successful`);
+      return { data: result };
+    } catch (error) {
+      logger.error(`[${serviceRequestId}] Error getting favorites:`, error);
+      return {
+        error: {
+          code: 'FAVORITES_ERROR',
+          level: 'ERROR',
+          message: error instanceof Error ? error.message : 'Failed to retrieve favorites'
+        }
+      };
+    }
+  }
+
   isLoggedIn(): boolean {
     return this.soaClient?.sessionId !== null && this.soaClient?.sessionId !== undefined;
   }

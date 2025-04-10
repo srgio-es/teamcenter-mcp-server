@@ -533,6 +533,22 @@ class TeamcenterServer {
             },
           },
         },
+        {
+          name: 'get_session_info',
+          description: 'Get current Teamcenter session information',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'get_favorites',
+          description: 'Get user favorites from Teamcenter',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
       ],
     }));
 
@@ -797,6 +813,56 @@ class TeamcenterServer {
                   {
                     type: 'text',
                     text: `Failed to get last created items: ${response.error.message}`,
+                  },
+                ],
+                isError: true,
+              };
+            }
+            
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case 'get_session_info': {
+            const response = await teamcenterService.getSessionInfo();
+            
+            if (response.error) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Failed to get session info: ${response.error.message}`,
+                  },
+                ],
+                isError: true,
+              };
+            }
+            
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case 'get_favorites': {
+            const response = await teamcenterService.getFavorites();
+            
+            if (response.error) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Failed to get favorites: ${response.error.message}`,
                   },
                 ],
                 isError: true,
