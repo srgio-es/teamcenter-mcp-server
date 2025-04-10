@@ -1,42 +1,6 @@
-
 import { TCSession } from './types.js';
+import { AppError, ErrorType, handleDataError } from './tcErrors.js';
 import logger from '../logger.js';
-
-// Simple error handling to replace @/utils/errorHandler
-enum ErrorType {
-  DATA_VALIDATION = 'DATA_VALIDATION',
-  DATA_PARSING = 'DATA_PARSING',
-  API_RESPONSE = 'API_RESPONSE',
-  API_TIMEOUT = 'API_TIMEOUT',
-  AUTH_SESSION = 'AUTH_SESSION',
-  NETWORK = 'NETWORK',
-  UNKNOWN = 'UNKNOWN'
-}
-
-class AppError extends Error {
-  constructor(
-    message: string,
-    public type: ErrorType,
-    public originalError: Error | null,
-    public context?: Record<string, any>
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
-
-const handleDataError = (error: unknown, context: string): AppError => {
-  if (error instanceof AppError) {
-    return error;
-  }
-  
-  return new AppError(
-    `Data error in ${context}: ${error instanceof Error ? error.message : String(error)}`,
-    ErrorType.DATA_PARSING,
-    error instanceof Error ? error : null,
-    { context }
-  );
-};
 
 // Cookie names for session persistence
 export const JSESSIONID_COOKIE = 'JSESSIONID';

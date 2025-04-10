@@ -1,43 +1,8 @@
 import { TCSOAClientConfig } from './types.js';
 import { createJSONRequest, getSessionCookie, storeSessionCookie } from './tcUtils.js';
 import { parseJSONResponse } from './tcResponseParser.js';
+import { AppError, ErrorType, handleApiError, logError } from './tcErrors.js';
 import logger from '../logger.js';
-
-// Simple error handling to replace @/utils/errorHandler
-enum ErrorType {
-  DATA_VALIDATION = 'DATA_VALIDATION',
-  DATA_PARSING = 'DATA_PARSING',
-  API_RESPONSE = 'API_RESPONSE',
-  API_TIMEOUT = 'API_TIMEOUT',
-  AUTH_SESSION = 'AUTH_SESSION',
-  NETWORK = 'NETWORK',
-  UNKNOWN = 'UNKNOWN'
-}
-
-class AppError extends Error {
-  constructor(
-    message: string,
-    public type: ErrorType,
-    public originalError: Error | null,
-    public context?: Record<string, any>
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
-
-const handleApiError = (error: unknown, context: string): AppError => {
-  if (error instanceof AppError) {
-    return error;
-  }
-  
-  return new AppError(
-    `API error in ${context}: ${error instanceof Error ? error.message : String(error)}`,
-    ErrorType.API_RESPONSE,
-    error instanceof Error ? error : null,
-    { context }
-  );
-};
 
 /**
  * Real API communication implementation for Teamcenter services
@@ -164,6 +129,16 @@ export const realCallService = async (
         );
       }
       
+      // Handle network errors
+      if (error instanceof Error && error.message.includes('fetch failed')) {
+        throw new AppError(
+          `Network error connecting to Teamcenter: ${error.message}`,
+          ErrorType.NETWORK,
+          error,
+          { service, operation, endpoint }
+        );
+      }
+      
       // Re-throw other errors
       throw error;
     }
@@ -239,7 +214,7 @@ export const realCallService = async (
         'Failed to parse response as JSON',
         ErrorType.DATA_PARSING,
         error instanceof Error ? error : null,
-        { service, operation }
+        { service, operation, responseText: await response.text() }
       );
     }
   } catch (error) {
@@ -253,6 +228,8 @@ export const realCallService = async (
       // Convert to AppError and log
       const apiError = handleApiError(error, `${service}.${operation}`);
       logger.logTeamcenterResponse(service, operation, null, requestId, apiError);
+      // Log additional context for debugging
+      logError(apiError, `API call to ${service}.${operation}`);
       throw apiError;
     }
   }

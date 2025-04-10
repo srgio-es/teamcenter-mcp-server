@@ -1,5 +1,5 @@
-
 import { TCCredentials, TCSearchOptions, TCSearchResponse } from './types.js';
+import { AppError, ErrorType } from './tcErrors.js';
 import logger from '../logger.js';
 
 // Mock service implementation
@@ -58,7 +58,13 @@ export const mockCallService = async (
       
       return response;
     }
-    throw new Error('Invalid credentials');
+    
+    throw new AppError(
+      'Invalid credentials',
+      ErrorType.AUTH_SESSION,
+      null,
+      { service, operation, username: user }
+    );
   }
   
   if (service === 'Core-2007-06-Session' && operation === 'logout') {
@@ -183,7 +189,12 @@ export const mockCallService = async (
     return response;
   }
   
-  const error = new Error(`Unimplemented SOA service: ${service}.${operation}`);
+  const error = new AppError(
+    `Unimplemented SOA service: ${service}.${operation}`,
+    ErrorType.API_RESPONSE,
+    null,
+    { service, operation }
+  );
   
   // Log the error response
   logger.logTeamcenterResponse(service, operation, null, requestId, error);

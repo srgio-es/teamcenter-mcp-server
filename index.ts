@@ -14,8 +14,9 @@ import * as dotenv from 'dotenv';
 import logger from './logger.js';
 
 // Import Teamcenter types
-import { TCCredentials, TCSearchOptions, TCObject, TCResponse } from './teamcenter/types.js';
-import { createSOAClient } from './teamcenter/tcSOAClient.js';
+import { TCCredentials, TCSearchOptions, TCSearchResponse, TCObject, TCResponse } from './teamcenter/types.js';
+import { initTeamcenterService, teamcenterService } from './teamcenter/teamcenterService.js';
+import { AppError, ErrorType } from './teamcenter/tcErrors.js';
 
 // Load environment variables from .env file for local testing
 dotenv.config();
@@ -48,212 +49,8 @@ logger.info(`Starting Teamcenter MCP server in ${MOCK_MODE ? 'MOCK' : 'REAL'} mo
 // Set up environment for teamcenterService
 (global as any).teamcenterConfig = teamcenterConfig;
 
-// Import Teamcenter service modules after setting global config
-import { teamcenterService, initTeamcenterService } from './teamcenter/teamcenterService.js';
-
 // Initialize the teamcenterService after setting global config
 initTeamcenterService();
-
-// Create a typed version of the teamcenterService with all the methods we need
-interface TeamcenterServiceInterface {
-  login(credentials: TCCredentials): Promise<TCResponse<any>>;
-  logout(): Promise<TCResponse<void>>;
-  getUserOwnedItems(): Promise<TCResponse<TCObject[]>>;
-  getLastCreatedItems(limit?: number): Promise<TCResponse<TCObject[]>>;
-  getItemTypes(): Promise<TCResponse<any>>;
-  getItemById(itemId: string): Promise<TCResponse<any>>;
-  searchItems(query: string, type?: string, limit?: number): Promise<TCResponse<TCObject[]>>;
-  createItem(type: string, name: string, description: string, properties?: Record<string, any>): Promise<TCResponse<any>>;
-  updateItem(itemId: string, properties: Record<string, any>): Promise<TCResponse<any>>;
-}
-
-// Cast the teamcenterService to our interface
-const typedTeamcenterService = teamcenterService as unknown as TeamcenterServiceInterface;
-
-// Add missing methods to teamcenterService if they don't exist
-if (!('getItemTypes' in typedTeamcenterService)) {
-  teamcenterService.getItemTypes = async (): Promise<TCResponse<any>> => {
-    try {
-      const soaClient = createSOAClient(teamcenterConfig);
-      const result = await soaClient.callService(
-        'Core-2006-03-BusinessObjectType',
-        'getBusinessObjectTypes',
-        {}
-      );
-      return { data: result };
-    } catch (error) {
-      logger.error('Error getting item types:', error);
-      return {
-        error: {
-          code: 'API_ERROR',
-          level: 'ERROR',
-          message: error instanceof Error ? error.message : 'Failed to get item types'
-        }
-      };
-    }
-  };
-}
-
-if (!('getItemById' in typedTeamcenterService)) {
-  teamcenterService.getItemById = async (itemId: string): Promise<TCResponse<any>> => {
-    try {
-      const soaClient = createSOAClient(teamcenterConfig);
-      const result = await soaClient.callService(
-        'Core-2006-03-DataManagement',
-        'getProperties',
-        { uids: [itemId] }
-      );
-      return { data: result };
-    } catch (error) {
-      logger.error('Error getting item by ID:', error);
-      return {
-        error: {
-          code: 'API_ERROR',
-          level: 'ERROR',
-          message: error instanceof Error ? error.message : 'Failed to get item'
-        }
-      };
-    }
-  };
-}
-
-if (!('searchItems' in typedTeamcenterService)) {
-  teamcenterService.searchItems = async (query: string, type?: string, limit: number = 10): Promise<TCResponse<TCObject[]>> => {
-    try {
-      const soaClient = createSOAClient(teamcenterConfig);
-      
-      // Build search criteria
-      const searchOptions: TCSearchOptions = {
-        searchInput: {
-          providerName: "Fnd0BaseProvider",
-          searchCriteria: {
-            Name: query
-          },
-          startIndex: 0,
-          maxToReturn: limit,
-          maxToLoad: limit,
-          searchFilterMap: {},
-          searchSortCriteria: [{
-            fieldName: "creation_date",
-            sortDirection: "DESC"
-          }],
-          searchFilterFieldSortType: "Alphabetical",
-          attributesToInflate: [
-            'object_name', 
-            'object_desc',
-            'object_string',
-            'item_id',
-            'item_revision_id',
-            'release_status_list',
-            'owning_user',
-            'creation_date',
-            'last_mod_date'
-          ]
-        }
-      };
-      
-      if (type) {
-        searchOptions.searchInput.searchFilterMap = {
-          "Item Type": [{
-            searchFilterType: "StringFilter",
-            stringValue: type,
-            startDateValue: "",
-            endDateValue: "",
-            startNumericValue: 0,
-            endNumericValue: 0,
-            count: 1,
-            selected: true,
-            startEndRange: ""
-          }]
-        };
-      }
-      
-      const result = await soaClient.callService(
-        'Query-2012-10-Finder',
-        'performSearch',
-        searchOptions
-      );
-      
-      // Cast the result to TCObject[] to satisfy TypeScript
-      return { data: result as unknown as TCObject[] };
-    } catch (error) {
-      logger.error('Error searching items:', error);
-      return {
-        error: {
-          code: 'SEARCH_ERROR',
-          level: 'ERROR',
-          message: error instanceof Error ? error.message : 'Failed to search items'
-        }
-      };
-    }
-  };
-}
-
-if (!('createItem' in typedTeamcenterService)) {
-  teamcenterService.createItem = async (type: string, name: string, description: string, properties: Record<string, any> = {}): Promise<TCResponse<any>> => {
-    try {
-      const soaClient = createSOAClient(teamcenterConfig);
-      
-      const createData = {
-        boName: type,
-        data: {
-          ...properties,
-          object_name: name,
-          object_desc: description,
-        },
-      };
-      
-      const result = await soaClient.callService(
-        'Core-2006-03-DataManagement',
-        'createObjects',
-        { objects: [createData] }
-      );
-      
-      return { data: result };
-    } catch (error) {
-      logger.error('Error creating item:', error);
-      return {
-        error: {
-          code: 'CREATE_ERROR',
-          level: 'ERROR',
-          message: error instanceof Error ? error.message : 'Failed to create item'
-        }
-      };
-    }
-  };
-}
-
-if (!('updateItem' in typedTeamcenterService)) {
-  teamcenterService.updateItem = async (itemId: string, properties: Record<string, any>): Promise<TCResponse<any>> => {
-    try {
-      const soaClient = createSOAClient(teamcenterConfig);
-      
-      const result = await soaClient.callService(
-        'Core-2006-03-DataManagement',
-        'setProperties',
-        {
-          objects: [
-            {
-              uid: itemId,
-              properties,
-            },
-          ],
-        }
-      );
-      
-      return { data: result };
-    } catch (error) {
-      logger.error('Error updating item:', error);
-      return {
-        error: {
-          code: 'UPDATE_ERROR',
-          level: 'ERROR',
-          message: error instanceof Error ? error.message : 'Failed to update item'
-        }
-      };
-    }
-  };
-}
 
 // MCP Server implementation
 class TeamcenterServer {
@@ -321,7 +118,7 @@ class TeamcenterServer {
         // Item types resource
         if (request.params.uri === 'teamcenter://item-types') {
           // Use the teamcenterService to get item types
-          const response = await typedTeamcenterService.getItemTypes();
+          const response = await teamcenterService.getItemTypes();
           
           if (response.error) {
             throw new McpError(ErrorCode.InternalError, response.error.message);
@@ -344,7 +141,7 @@ class TeamcenterServer {
           const itemId = decodeURIComponent(itemMatch[1]);
           
           // Use the teamcenterService to get item details
-          const response = await typedTeamcenterService.getItemById(itemId);
+          const response = await teamcenterService.getItemById(itemId);
           
           if (response.error) {
             throw new McpError(ErrorCode.InternalError, response.error.message);
@@ -367,7 +164,7 @@ class TeamcenterServer {
           const query = decodeURIComponent(searchMatch[1]);
           
           // Use the teamcenterService to search for items
-          const response = await typedTeamcenterService.searchItems(query);
+          const response = await teamcenterService.searchItems(query);
           
           if (response.error) {
             throw new McpError(ErrorCode.InternalError, response.error.message);
@@ -628,7 +425,7 @@ class TeamcenterServer {
               throw new McpError(ErrorCode.InvalidParams, 'Query parameter is required');
             }
             
-            const response = await typedTeamcenterService.searchItems(query, type, limit);
+            const response = await teamcenterService.searchItems(query, type, limit);
             
             if (response.error) {
               return {
@@ -659,7 +456,7 @@ class TeamcenterServer {
               throw new McpError(ErrorCode.InvalidParams, 'Item ID is required');
             }
             
-            const response = await typedTeamcenterService.getItemById(id);
+            const response = await teamcenterService.getItemById(id);
             
             if (response.error) {
               return {
@@ -695,7 +492,7 @@ class TeamcenterServer {
               throw new McpError(ErrorCode.InvalidParams, 'Type and name parameters are required');
             }
             
-            const response = await typedTeamcenterService.createItem(type, name, description, properties);
+            const response = await teamcenterService.createItem(type, name, description, properties);
             
             if (response.error) {
               return {
@@ -729,7 +526,7 @@ class TeamcenterServer {
               throw new McpError(ErrorCode.InvalidParams, 'Item ID and properties are required');
             }
             
-            const response = await typedTeamcenterService.updateItem(id, properties);
+            const response = await teamcenterService.updateItem(id, properties);
             
             if (response.error) {
               return {
@@ -754,7 +551,7 @@ class TeamcenterServer {
           }
           
           case 'get_item_types': {
-            const response = await typedTeamcenterService.getItemTypes();
+            const response = await teamcenterService.getItemTypes();
             
             if (response.error) {
               return {

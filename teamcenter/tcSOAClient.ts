@@ -2,6 +2,7 @@ import { TCSOAClientConfig } from './types.js';
 import { realCallService } from './tcApiService.js';
 import { mockCallService } from './tcMockService.js';
 import { storeSessionCookie, getSessionCookie, storeSession } from './tcUtils.js';
+import { AppError, ErrorType, handleApiError } from './tcErrors.js';
 import logger from '../logger.js';
 
 export interface SOAClient {
@@ -52,6 +53,16 @@ export const createSOAClient = (
     
     // Service call method that routes to the real or mock implementation
     callService: async (service: string, operation: string, params: unknown): Promise<unknown> => {
+      // Input validation
+      if (!service || !operation) {
+        throw new AppError(
+          'Invalid service or operation parameters',
+          ErrorType.DATA_VALIDATION,
+          null,
+          { service, operation }
+        );
+      }
+      
       // Generate a unique request ID for client-level tracing
       const clientRequestId = `client_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       logger.debug(`[${clientRequestId}] SOA client call: ${service}.${operation}`);
@@ -61,6 +72,9 @@ export const createSOAClient = (
         const result = config.mockMode 
           ? await mockCallService(service, operation, params)
           : await realCallService(config, sessionId, service, operation, params);
+        
+        // Add request tracing
+        logger.debug(`[${clientRequestId}] SOA client call completed: ${service}.${operation}`);
         
         // Handle response to extract session ID if available
         if (typeof result === 'object' && result !== null) {
@@ -105,7 +119,18 @@ export const createSOAClient = (
         return result;
       } catch (error) {
         logger.error(`[${clientRequestId}] SOA client error (${service}.${operation}):`, error);
-        throw error;
+        
+        // Enhance error handling with more context
+        if (error instanceof AppError) {
+          // Already an AppError, just add more context if needed
+          if (!error.context) {
+            error.context = { service, operation };
+          }
+          throw error;
+        } else {
+          // Convert to AppError with proper context
+          throw handleApiError(error, `SOA client call to ${service}.${operation}`);
+        }
       }
     }
   };
