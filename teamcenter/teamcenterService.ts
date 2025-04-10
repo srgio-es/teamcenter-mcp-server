@@ -14,9 +14,7 @@ import logger from '../logger.js';
 // Default teamcenter config - will be overridden by global config
 const defaultTeamcenterConfig = {
   endpoint: 'http://localhost:8080/tc',
-  timeout: 60000,
-  withCredentials: true,
-  mode: 'cors' as RequestMode
+  timeout: 60000
 };
 
 // Function to get teamcenterConfig from global or use default
@@ -54,7 +52,7 @@ class TeamcenterService {
     this.soaClient = createSOAClient(getTeamcenterConfig(), sessionId);
     
     if (sessionId) {
-      logger.info('Teamcenter session restored from browser storage');
+      logger.info('Teamcenter session restored from stored cookie');
     }
   }
 
@@ -71,7 +69,7 @@ class TeamcenterService {
         credentials
       ) as TCSession;
       
-      // Store session in browser storage
+      // Store session
       storeSession(session);
       
       return { data: session };
@@ -262,7 +260,7 @@ class TeamcenterService {
         {}
       );
       
-      // Clear session from browser storage
+      // Clear session
       clearSession();
       this.soaClient.sessionId = null;
       

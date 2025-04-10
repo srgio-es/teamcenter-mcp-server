@@ -1,6 +1,6 @@
 
 import { TCSOAClientConfig } from './types.js';
-import { createJSONRequest } from './tcUtils.js';
+import { createJSONRequest, getSessionCookie } from './tcUtils.js';
 import { parseJSONResponse } from './tcResponseParser.js';
 import logger from '../logger.js';
 
@@ -40,42 +40,6 @@ const handleApiError = (error: unknown, context: string): AppError => {
   );
 };
 
-// Import cookie constants and functions from tcUtils
-import { 
-  JSESSIONID_COOKIE, 
-  ASPNET_SESSIONID_COOKIE,
-  getCookie
-} from './tcUtils.js';
-
-/**
- * Helper function to get the session cookie (either JSESSIONID or ASP.NET_SessionId)
- * @returns An object with the cookie name and value, or null if not found
- */
-const getSessionCookie = (): { name: string; value: string } | null => {
-  // Check if we're in a browser environment
-  if (typeof document === 'undefined' || !document.cookie) {
-    logger.debug('Not in browser environment, no cookies available');
-    return null;
-  }
-  
-  // First try JSESSIONID (Java/J2EE backend)
-  const jsessionId = getCookie(JSESSIONID_COOKIE);
-  if (jsessionId) {
-    logger.debug('JSESSIONID cookie found');
-    return { name: JSESSIONID_COOKIE, value: jsessionId };
-  }
-  
-  // Then try ASP.NET_SessionId (IIS/.NET backend)
-  const aspNetSessionId = getCookie(ASPNET_SESSIONID_COOKIE);
-  if (aspNetSessionId) {
-    logger.debug('ASP.NET_SessionId cookie found');
-    return { name: ASPNET_SESSIONID_COOKIE, value: aspNetSessionId };
-  }
-  
-  logger.debug('No session cookie found');
-  return null;
-};
-
 /**
  * Real API communication implementation for Teamcenter services
  * @param config The SOA client configuration
@@ -110,7 +74,6 @@ export const realCallService = async (
     const headers: HeadersInit = {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      // Ensure cookies are handled properly for CORS
       'X-Requested-With': 'XMLHttpRequest'
     };
     
@@ -123,39 +86,25 @@ export const realCallService = async (
     // Explicitly add session cookie to the request if it exists
     const sessionCookie = getSessionCookie();
     if (sessionCookie) {
-      logger.debug(`Adding ${sessionCookie.name} to request headers`);
+      logger.debug(`Adding ${sessionCookie.name} cookie to request headers`);
       headers['Cookie'] = `${sessionCookie.name}=${sessionCookie.value}`;
     }
     
-    // Log cookies for debugging (only in browser environment)
-    if (typeof document !== 'undefined' && document.cookie) {
-      logger.debug('Current cookies:', document.cookie);
-    }
     logger.debug('Request headers:', headers);
     
     // Set up fetch options with timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), config.timeout || 60000);
     
-    // Make the fetch request with explicit CORS configuration
+    // Make the fetch request
     let response;
     try {
-      // Check if we're in a Node.js environment and need to use node-fetch
       const fetchOptions = {
         method: 'POST',
         headers,
         body: JSON.stringify(jsonRequestBody),
         signal: controller.signal // For timeout handling
       };
-      
-      // Add browser-specific options only in browser environment
-      if (typeof window !== 'undefined') {
-        Object.assign(fetchOptions, {
-          credentials: 'include', // Always include credentials (cookies)
-          mode: config.mode || 'cors', // Explicitly specify CORS mode
-          cache: 'no-cache' // Prevent caching issues with session cookies
-        });
-      }
       
       response = await fetch(endpoint, fetchOptions);
       
@@ -204,8 +153,7 @@ export const realCallService = async (
       clearTimeout(timeoutId);
       
       // Handle abort error (timeout)
-      if ((typeof DOMException !== 'undefined' && error instanceof DOMException && error.name === 'AbortError') ||
-          (error instanceof Error && error.name === 'AbortError')) {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new AppError(
           `Request timeout after ${config.timeout || 60000}ms`,
           ErrorType.API_TIMEOUT,
@@ -230,6 +178,35 @@ export const realCallService = async (
     logger.debug('Response content type:', contentType);
     if (newSessionId) {
       logger.debug('Session ID found in headers');
+    }
+    
+    // Check for session cookies in the response
+    const setCookieHeader = response.headers.get('Set-Cookie');
+    if (setCookieHeader) {
+      logger.debug('Set-Cookie header found:', setCookieHeader);
+      
+      // Parse the Set-Cookie header to extract session cookies
+      // This is a simplified approach - in a real implementation, you might use a cookie parsing library
+      const cookies = setCookieHeader.split(',');
+      
+      for (const cookie of cookies) {
+        const [cookieNameValue] = cookie.split(';');
+        const [cookieName, cookieValue] = cookieNameValue.split('=');
+        
+        if (cookieName.trim() === 'JSESSIONID') {
+          logger.debug(`Found JSESSIONID cookie in response: ${cookieValue}`);
+          // Store the session cookie for future requests
+          import('./tcUtils.js').then(tcUtils => {
+            tcUtils.storeSessionCookie('JSESSIONID', cookieValue);
+          });
+        } else if (cookieName.trim() === 'ASP.NET_SessionId') {
+          logger.debug(`Found ASP.NET_SessionId cookie in response: ${cookieValue}`);
+          // Store the session cookie for future requests
+          import('./tcUtils.js').then(tcUtils => {
+            tcUtils.storeSessionCookie('ASP.NET_SessionId', cookieValue);
+          });
+        }
+      }
     }
     
     // Parse the JSON response

@@ -40,8 +40,6 @@ if (!MOCK_MODE && (!TEAMCENTER_BASE_URL || !TEAMCENTER_USERNAME || !TEAMCENTER_P
 const teamcenterConfig = {
   endpoint: MOCK_MODE ? 'http://localhost:8080/tc' : (TEAMCENTER_BASE_URL as string),
   timeout: 60000,
-  withCredentials: true,
-  mode: 'cors' as RequestMode,
   mockMode: MOCK_MODE
 };
 

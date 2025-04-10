@@ -2,6 +2,7 @@
 import { TCSOAClientConfig } from './types.js';
 import { realCallService } from './tcApiService.js';
 import { mockCallService } from './tcMockService.js';
+import { storeSessionCookie, getSessionCookie } from './tcUtils.js';
 import logger from '../logger.js';
 
 export interface SOAClient {
@@ -15,6 +16,15 @@ export const createSOAClient = (
   initialSessionId: string | null = null
 ): SOAClient => {
   let sessionId = initialSessionId;
+  
+  // If we have a session cookie but no initialSessionId, use the cookie value
+  if (!initialSessionId) {
+    const cookie = getSessionCookie();
+    if (cookie) {
+      sessionId = cookie.value;
+      logger.debug(`Using session ID from cookie: ${sessionId}`);
+    }
+  }
 
   return {
     config,
@@ -25,6 +35,14 @@ export const createSOAClient = (
     
     set sessionId(value: string | null) {
       sessionId = value;
+      
+      // When sessionId is updated, also update the session cookie
+      if (value) {
+        // Determine which cookie name to use (ASP.NET_SessionId by default)
+        const cookieName = 'ASP.NET_SessionId';
+        storeSessionCookie(cookieName, value);
+        logger.debug(`Updated session cookie: ${cookieName}=${value}`);
+      }
     },
     
     // Service call method that routes to the real or mock implementation
@@ -46,6 +64,10 @@ export const createSOAClient = (
           // Update session ID if provided in the response
           if (resultObj.sessionId) {
             sessionId = resultObj.sessionId;
+            
+            // Also update the session cookie
+            const cookieName = 'ASP.NET_SessionId';
+            storeSessionCookie(cookieName, resultObj.sessionId);
             logger.debug(`Session ID updated: ${sessionId}`);
           }
           

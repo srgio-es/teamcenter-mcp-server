@@ -1,5 +1,5 @@
 
-import { TCSOAClientConfig, TCSession } from './types.js';
+import { TCSession } from './types.js';
 import logger from '../logger.js';
 
 // Simple error handling to replace @/utils/errorHandler
@@ -38,117 +38,59 @@ const handleDataError = (error: unknown, context: string): AppError => {
   );
 };
 
-// Constants
-export const SESSION_STORAGE_KEY = 'tc_session'; // Kept for backward compatibility
-
 // Cookie names for session persistence
 export const JSESSIONID_COOKIE = 'JSESSIONID';
 export const ASPNET_SESSIONID_COOKIE = 'ASP.NET_SessionId';
 
-// In-memory storage for Node.js environment
-let memoryStorage: Record<string, string> = {};
+// Session cookie storage for Node.js environment
+interface SessionCookie {
+  name: string;
+  value: string;
+}
 
-// Check if we're in a browser environment
-const isBrowser = typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
-const hasCookieSupport = typeof document !== 'undefined' && typeof document.cookie !== 'undefined';
+// Store the session cookie (either JSESSIONID or ASP.NET_SessionId)
+let sessionCookie: SessionCookie | null = null;
 
 /**
- * Get a cookie value by name
- * @param name The name of the cookie to retrieve
- * @returns The cookie value or null if not found
+ * Store the session cookie value
+ * @param name The cookie name (JSESSIONID or ASP.NET_SessionId)
+ * @param value The cookie value
  */
-export const getCookie = (name: string): string | null => {
-  if (!hasCookieSupport) {
-    return null;
-  }
-  
-  const cookies = document.cookie.split(';');
-  for (const cookie of cookies) {
-    const [cookieName, cookieValue] = cookie.trim().split('=');
-    if (cookieName === name) {
-      return cookieValue;
-    }
-  }
-  return null;
+export const storeSessionCookie = (name: string, value: string): void => {
+  sessionCookie = { name, value };
+  logger.debug(`Stored ${name} cookie with value: ${value}`);
 };
 
 /**
- * Set a cookie with the given name and value
- * @param name The name of the cookie
- * @param value The value to store
- * @param path The cookie path (default: '/')
- * @param maxAge The cookie max age in seconds (default: session cookie)
+ * Get the stored session cookie
+ * @returns The session cookie object or null if not set
  */
-export const setCookie = (name: string, value: string, path: string = '/', maxAge?: number): void => {
-  if (!hasCookieSupport) {
-    return;
-  }
-  
-  let cookieStr = `${name}=${value}; path=${path}`;
-  if (maxAge !== undefined) {
-    cookieStr += `; max-age=${maxAge}`;
-  }
-  
-  document.cookie = cookieStr;
+export const getSessionCookie = (): SessionCookie | null => {
+  return sessionCookie;
 };
 
 /**
- * Delete a cookie by setting its expiration to the past
- * @param name The name of the cookie to delete
- * @param path The cookie path (default: '/')
+ * Clear the stored session cookie
  */
-export const deleteCookie = (name: string, path: string = '/'): void => {
-  if (!hasCookieSupport) {
-    return;
-  }
-  
-  document.cookie = `${name}=; path=${path}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+export const clearSessionCookie = (): void => {
+  sessionCookie = null;
+  logger.debug('Session cookie cleared');
 };
 
 /**
- * Store the Teamcenter session in cookies or memory in Node.js
+ * Store the Teamcenter session
  * @param session The session object to store
  */
 export const storeSession = (session: TCSession): void => {
   try {
-    // Store the session ID in the appropriate cookie if in browser environment
-    if (hasCookieSupport) {
-      // Check if we already have a JSESSIONID or ASP.NET_SessionId cookie
-      const jsessionId = getCookie(JSESSIONID_COOKIE);
-      const aspNetSessionId = getCookie(ASPNET_SESSIONID_COOKIE);
-      
-      // If we have a JSESSIONID cookie, update it with the session ID
-      if (jsessionId) {
-        setCookie(JSESSIONID_COOKIE, session.sessionId);
-        logger.debug('Updated JSESSIONID cookie with session ID');
-      }
-      
-      // If we have an ASP.NET_SessionId cookie, update it with the session ID
-      if (aspNetSessionId) {
-        setCookie(ASPNET_SESSIONID_COOKIE, session.sessionId);
-        logger.debug('Updated ASP.NET_SessionId cookie with session ID');
-      }
-      
-      // If we don't have either cookie, set both to ensure compatibility
-      if (!jsessionId && !aspNetSessionId) {
-        setCookie(JSESSIONID_COOKIE, session.sessionId);
-        setCookie(ASPNET_SESSIONID_COOKIE, session.sessionId);
-        logger.debug('Created session cookies for both JSESSIONID and ASP.NET_SessionId');
-      }
-      
-      // For backward compatibility, also store in sessionStorage
-      if (isBrowser) {
-        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-        logger.debug('Teamcenter session also stored in browser sessionStorage for backward compatibility');
-      }
-    } else if (isBrowser) {
-      // Fallback to sessionStorage if cookies are not available
-      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-      logger.debug('Teamcenter session stored in browser sessionStorage (cookies not available)');
-    } else {
-      // Fallback to memory storage for Node.js
-      memoryStorage[SESSION_STORAGE_KEY] = JSON.stringify(session);
-      logger.debug('Teamcenter session stored in memory (Node.js environment)');
+    // Store the session ID in memory
+    if (session.sessionId) {
+      // Determine which cookie name to use based on the server type
+      // This is a heuristic - we'll prefer ASP.NET_SessionId by default
+      // but could be configured based on server response headers
+      const cookieName = ASPNET_SESSIONID_COOKIE;
+      storeSessionCookie(cookieName, session.sessionId);
+      logger.debug(`Stored session ID as ${cookieName}`);
     }
   } catch (error) {
     logger.error('Failed to store Teamcenter session:', error);
@@ -157,108 +99,34 @@ export const storeSession = (session: TCSession): void => {
 };
 
 /**
- * Retrieve the Teamcenter session from cookies, sessionStorage, or memory in Node.js
- * @returns The session object or null if not found or invalid
+ * Retrieve the Teamcenter session
+ * @returns The session object or null if not found
  */
 export const retrieveSession = (): TCSession | null => {
-  // First try to get session ID from cookies
-  if (hasCookieSupport) {
-    const jsessionId = getCookie(JSESSIONID_COOKIE);
-    const aspNetSessionId = getCookie(ASPNET_SESSIONID_COOKIE);
-    
-    // If we have a session ID from cookies, construct a minimal session object
-    if (jsessionId || aspNetSessionId) {
-      const sessionId = jsessionId || aspNetSessionId;
-      
-      // Ensure sessionId is not null (TypeScript safety)
-      if (sessionId) {
-        logger.debug(`Teamcenter session ID found in cookies: ${sessionId}`);
-        
-        // Try to get the full session from sessionStorage for additional info
-        let fullSession: TCSession | null = null;
-        
-        if (isBrowser) {
-          const storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
-          if (storedSession) {
-            try {
-              fullSession = JSON.parse(storedSession) as TCSession;
-            } catch (error) {
-              logger.warn('Failed to parse stored session from sessionStorage:', error);
-            }
-          }
-        } else {
-          const storedSession = memoryStorage[SESSION_STORAGE_KEY] || null;
-          if (storedSession) {
-            try {
-              fullSession = JSON.parse(storedSession) as TCSession;
-            } catch (error) {
-              logger.warn('Failed to parse stored session from memory:', error);
-            }
-          }
-        }
-        
-        // If we have a full session and the session IDs match, return it
-        if (fullSession && fullSession.sessionId === sessionId) {
-          logger.debug('Full Teamcenter session restored from storage');
-          return fullSession;
-        }
-        
-        // Otherwise, return a minimal session object with just the session ID
-        logger.debug('Created minimal Teamcenter session from cookie');
-        return {
-          sessionId: sessionId,
-          userId: '',
-          userName: ''
-        };
-      }
-    }
-  }
+  // Get the session cookie
+  const cookie = getSessionCookie();
   
-  // Fallback to sessionStorage or memory storage
-  let storedSession: string | null = null;
-  
-  if (isBrowser) {
-    storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
-  } else {
-    storedSession = memoryStorage[SESSION_STORAGE_KEY] || null;
-  }
-  
-  if (!storedSession) {
-    logger.debug('No Teamcenter session found in storage');
+  if (!cookie) {
+    logger.debug('No session cookie found');
     return null;
   }
   
-  try {
-    const session = JSON.parse(storedSession) as TCSession;
-    logger.debug('Teamcenter session restored from storage');
-    return session;
-  } catch (error) {
-    logger.error('Failed to parse stored Teamcenter session:', error);
-    // Clear the invalid session data
-    clearSession();
-    return null;
-  }
+  logger.debug(`Found session cookie: ${cookie.name}=${cookie.value}`);
+  
+  // Create a minimal session object with just the session ID
+  return {
+    sessionId: cookie.value,
+    userId: '',
+    userName: ''
+  };
 };
 
 /**
- * Clear the Teamcenter session from cookies, sessionStorage, or memory in Node.js
+ * Clear the Teamcenter session
  */
 export const clearSession = (): void => {
-  // Clear cookies if in browser environment
-  if (hasCookieSupport) {
-    deleteCookie(JSESSIONID_COOKIE);
-    deleteCookie(ASPNET_SESSIONID_COOKIE);
-    logger.debug('Teamcenter session cookies cleared');
-  }
-  
-  // Also clear sessionStorage for backward compatibility
-  if (isBrowser) {
-    sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    logger.debug('Teamcenter session cleared from browser sessionStorage');
-  } else {
-    delete memoryStorage[SESSION_STORAGE_KEY];
-    logger.debug('Teamcenter session cleared from memory (Node.js environment)');
-  }
+  clearSessionCookie();
+  logger.debug('Teamcenter session cleared');
 };
 
 /**
@@ -269,9 +137,9 @@ export const clearSession = (): void => {
 export const isValidSession = (session: TCSession | null): boolean => {
   if (!session) return false;
   
-  // Check for required fields
-  if (!session.sessionId || !session.userId) {
-    logger.debug('Invalid session: missing required fields');
+  // For our simplified session management, we only need the sessionId
+  if (!session.sessionId) {
+    logger.debug('Invalid session: missing sessionId');
     return false;
   }
   
@@ -294,7 +162,7 @@ export const createJSONRequest = (service: string, operation: string, params: un
         unloadObjects: true,
         enableServerStateHeaders: true,
         formatProperties: true,
-        clientID: "ActiveWorkspaceClient"
+        clientID: "NodeJsTeamcenterClient"
       },
       policy: {}
     };
@@ -307,7 +175,7 @@ export const createJSONRequest = (service: string, operation: string, params: un
     
     // Handle specific operations
     if (service === 'Core-2011-06-Session' && operation === 'login') {
-      // Extract credentials from params, ensuring we get the original values from the login form
+      // Extract credentials from params
       const credentials = params as { username: string; password: string };
       
       if (!credentials.username || !credentials.password) {
@@ -328,7 +196,7 @@ export const createJSONRequest = (service: string, operation: string, params: un
           group: "",
           role: "",
           locale: "en_US",
-          descrimator: `TcWeb_${Date.now()}_${Math.random().toString(36).substring(7)}` // Unique discriminator with prefix
+          descrimator: `NodeJs_${Date.now()}_${Math.random().toString(36).substring(7)}` // Unique discriminator with prefix
         }
       };
     } else if (service === 'Core-2007-06-Session' && operation === 'logout') {
