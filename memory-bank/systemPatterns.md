@@ -63,6 +63,7 @@ The server implements the Model Context Protocol (MCP) to expose Teamcenter func
 - Standardized communication between Claude and Teamcenter
 - Clear separation between the UI (Claude) and the data source (Teamcenter)
 - Ability to expose both resources (data) and tools (actions)
+- Dynamic resource access through URI templates
 
 ### 2. Service-Oriented Architecture (SOA)
 
@@ -71,6 +72,7 @@ The server uses Teamcenter's SOA API for most operations, which provides:
 - Comprehensive access to Teamcenter functionality
 - Consistent error handling
 - Support for complex operations
+- Standardized request/response formats
 
 ### 3. Singleton Pattern for Services
 
@@ -79,6 +81,7 @@ The teamcenterService is implemented as a singleton to:
 - Maintain a single session with Teamcenter
 - Provide a consistent interface for Teamcenter operations
 - Simplify state management
+- Enable dynamic method creation for missing functionality
 
 ### 4. Environment-Based Configuration
 
@@ -87,6 +90,7 @@ Configuration is managed through environment variables to:
 - Separate configuration from code
 - Support different deployment environments
 - Secure sensitive information like credentials
+- Enable mock mode for testing without a real Teamcenter instance
 
 ### 5. Error Handling Strategy
 
@@ -95,6 +99,8 @@ The server implements a comprehensive error handling strategy:
 - All API calls are wrapped in try/catch blocks
 - Errors are transformed into standardized TCResponse objects
 - MCP errors are mapped to appropriate error codes
+- AppError class with error types for better categorization
+- Detailed logging with request IDs for traceability
 
 ## Component Relationships
 
@@ -110,6 +116,11 @@ graph TD
     C --> G[Utilities]
     D --> G
     E --> G
+    H[Logger] --> A
+    H --> B
+    H --> C
+    H --> D
+    H --> E
 ```
 
 ### Data Flow
@@ -120,17 +131,20 @@ graph TD
    - The handler calls the teamcenterService
    - The service uses the SOA client to communicate with Teamcenter
    - The response is parsed and returned to Claude
+   - Each request is assigned a unique ID for tracing
 
 2. **Authentication Flow**:
    - The server reads credentials from environment variables
    - On startup, it authenticates with Teamcenter
    - The session token is stored for subsequent requests
+   - Session cookies are managed for persistent authentication
    - If authentication fails, appropriate errors are returned
 
 3. **Error Flow**:
    - API errors are caught and transformed into TCResponse objects
+   - Errors are categorized by type (API_RESPONSE, DATA_PARSING, etc.)
    - MCP errors are mapped to appropriate error codes
-   - Errors are logged for debugging
+   - Errors are logged with context information for debugging
    - User-friendly error messages are returned to Claude
 
 ## Design Patterns
@@ -201,35 +215,50 @@ mockTeamcenterService.searchItems = async (query, type, limit) => {
 ### 1. Authentication
 
 ```
-MCP Server -> teamcenterService.login() -> SOAClient.callService() -> Teamcenter API -> Session Token
+MCP Server -> teamcenterService.login() -> SOAClient.callService() -> tcApiService.realCallService() -> Teamcenter API -> Session Token/Cookie -> tcUtils.storeSessionCookie()
 ```
 
 ### 2. Item Search
 
 ```
-MCP Server -> teamcenterService.searchItems() -> SOAClient.callService() -> Teamcenter API -> Raw Results -> Response Parser -> TCObjects
+MCP Server -> teamcenterService.searchItems() -> SOAClient.callService() -> tcApiService.realCallService() -> Teamcenter API -> Raw Results -> tcResponseParser.parseJSONResponse() -> TCObjects
 ```
 
 ### 3. Item Creation
 
 ```
-MCP Server -> teamcenterService.createItem() -> SOAClient.callService() -> Teamcenter API -> Raw Result -> Response Parser -> TCObject
+MCP Server -> teamcenterService.createItem() -> SOAClient.callService() -> tcApiService.realCallService() -> tcUtils.createJSONRequest() -> Teamcenter API -> Raw Result -> tcResponseParser.parseJSONResponse() -> TCObject
 ```
 
 ### 4. Resource Access
 
 ```
-MCP Server -> ReadResourceRequestSchema handler -> teamcenterService method -> SOAClient.callService() -> Teamcenter API -> Raw Result -> JSON Response
+MCP Server -> ReadResourceRequestSchema handler -> URI pattern matching -> teamcenterService method -> SOAClient.callService() -> tcApiService.realCallService() -> Teamcenter API -> Raw Result -> JSON Response
 ```
 
 ## Performance Considerations
 
-1. **Session Management**: The server maintains a single session with Teamcenter to reduce authentication overhead.
+1. **Session Management**: 
+   - The server maintains a single session with Teamcenter to reduce authentication overhead
+   - Session cookies are stored for persistent authentication
+   - Session state is managed to avoid unnecessary re-authentication
 
-2. **Response Parsing**: Heavy parsing is done server-side to reduce the load on Claude.
+2. **Response Parsing**: 
+   - Heavy parsing is done server-side to reduce the load on Claude
+   - Standardized response formats for consistency
+   - Selective attribute inflation to reduce response size
 
-3. **Error Caching**: Common errors are cached to avoid repeated API calls for known issues.
+3. **Error Handling**:
+   - Common errors are categorized by type for better handling
+   - Detailed error context for easier troubleshooting
+   - Request IDs for tracing requests through the system
 
-4. **Pagination**: Search results are paginated to manage large result sets efficiently.
+4. **Request Optimization**:
+   - Search results are paginated to manage large result sets efficiently
+   - Result limits can be specified to control response size
+   - Search filters can be applied to narrow results
 
-5. **Timeout Handling**: API calls have configurable timeouts to prevent hanging operations.
+5. **Timeout Handling**: 
+   - API calls have configurable timeouts to prevent hanging operations
+   - AbortController is used for request cancellation
+   - Timeout errors are properly categorized and reported
