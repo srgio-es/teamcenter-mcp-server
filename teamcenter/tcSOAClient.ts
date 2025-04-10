@@ -1,8 +1,7 @@
-
 import { TCSOAClientConfig } from './types.js';
 import { realCallService } from './tcApiService.js';
 import { mockCallService } from './tcMockService.js';
-import { storeSessionCookie, getSessionCookie } from './tcUtils.js';
+import { storeSessionCookie, getSessionCookie, storeSession } from './tcUtils.js';
 import logger from '../logger.js';
 
 export interface SOAClient {
@@ -74,16 +73,21 @@ export const createSOAClient = (
           // For login operations, we need to handle the session ID differently
           if (service === 'Core-2011-06-Session' && operation === 'login') {
             // The cookie from the Set-Cookie header has already been stored by tcApiService.ts
-            // We should NOT overwrite it with the sessionId from the response body
             const cookie = getSessionCookie();
             if (cookie) {
-              // Use the cookie value as the session ID, not the one from the response
+              // Use the cookie value as the session ID and store it
               sessionId = cookie.value;
-              logger.debug(`[${clientRequestId}] Using session ID from cookie: ${sessionId}`);
+              // Store session info with the cookie value
+              storeSession({
+                sessionId: cookie.value,
+                userId: resultObj.data?.userid || '',
+                userName: resultObj.data?.username || ''
+              });
+              logger.debug(`[${clientRequestId}] Login: Updated session with cookie ID: ${sessionId}`);
             } else if (resultObj.sessionId) {
               // Only if no cookie was set, fall back to the sessionId from the response
               sessionId = resultObj.sessionId;
-              logger.debug(`[${clientRequestId}] No cookie found, using session ID from response: ${sessionId}`);
+              logger.debug(`[${clientRequestId}] Login: No cookie found, using session ID from response: ${sessionId}`);
             }
           } else if (resultObj.sessionId && !sessionId) {
             // For non-login operations, only update the session ID if we don't have one yet

@@ -1,6 +1,5 @@
-
 import { TCSOAClientConfig } from './types.js';
-import { createJSONRequest, getSessionCookie } from './tcUtils.js';
+import { createJSONRequest, getSessionCookie, storeSessionCookie } from './tcUtils.js';
 import { parseJSONResponse } from './tcResponseParser.js';
 import logger from '../logger.js';
 
@@ -201,15 +200,11 @@ export const realCallService = async (
         if (cookieName.trim() === 'JSESSIONID') {
           logger.debug(`Found JSESSIONID cookie in response: ${cookieValue}`);
           // Store the session cookie for future requests
-          import('./tcUtils.js').then(tcUtils => {
-            tcUtils.storeSessionCookie('JSESSIONID', cookieValue);
-          });
+          storeSessionCookie('JSESSIONID', cookieValue);
         } else if (cookieName.trim() === 'ASP.NET_SessionId') {
           logger.debug(`Found ASP.NET_SessionId cookie in response: ${cookieValue}`);
           // Store the session cookie for future requests
-          import('./tcUtils.js').then(tcUtils => {
-            tcUtils.storeSessionCookie('ASP.NET_SessionId', cookieValue);
-          });
+          storeSessionCookie('ASP.NET_SessionId', cookieValue);
         }
       }
     }
