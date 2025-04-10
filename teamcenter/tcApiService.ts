@@ -2,14 +2,7 @@
 import { TCSOAClientConfig } from './types.js';
 import { createJSONRequest } from './tcUtils.js';
 import { parseJSONResponse } from './tcResponseParser.js';
-
-// Simple logger implementation to replace @/utils/logger
-const logger = {
-  debug: (message: string, ...args: any[]) => console.debug(`[DEBUG] ${message}`, ...args),
-  info: (message: string, ...args: any[]) => console.info(`[INFO] ${message}`, ...args),
-  warn: (message: string, ...args: any[]) => console.warn(`[WARN] ${message}`, ...args),
-  error: (message: string, ...args: any[]) => console.error(`[ERROR] ${message}`, ...args)
-};
+import logger from '../logger.js';
 
 // Simple error handling to replace @/utils/errorHandler
 enum ErrorType {
@@ -47,25 +40,39 @@ const handleApiError = (error: unknown, context: string): AppError => {
   );
 };
 
+// Import cookie constants and functions from tcUtils
+import { 
+  JSESSIONID_COOKIE, 
+  ASPNET_SESSIONID_COOKIE,
+  getCookie
+} from './tcUtils.js';
+
 /**
- * Helper function to extract ASP.NET_SessionId from cookies
- * @returns The ASP.NET_SessionId cookie value or null if not found
+ * Helper function to get the session cookie (either JSESSIONID or ASP.NET_SessionId)
+ * @returns An object with the cookie name and value, or null if not found
  */
-const getAspNetSessionId = (): string | null => {
+const getSessionCookie = (): { name: string; value: string } | null => {
   // Check if we're in a browser environment
   if (typeof document === 'undefined' || !document.cookie) {
     logger.debug('Not in browser environment, no cookies available');
     return null;
   }
   
-  const cookies = document.cookie.split(';');
-  for (const cookie of cookies) {
-    const [name, value] = cookie.trim().split('=');
-    if (name === 'ASP.NET_SessionId') {
-      return value;
-    }
+  // First try JSESSIONID (Java/J2EE backend)
+  const jsessionId = getCookie(JSESSIONID_COOKIE);
+  if (jsessionId) {
+    logger.debug('JSESSIONID cookie found');
+    return { name: JSESSIONID_COOKIE, value: jsessionId };
   }
-  logger.debug('ASP.NET_SessionId cookie not found');
+  
+  // Then try ASP.NET_SessionId (IIS/.NET backend)
+  const aspNetSessionId = getCookie(ASPNET_SESSIONID_COOKIE);
+  if (aspNetSessionId) {
+    logger.debug('ASP.NET_SessionId cookie found');
+    return { name: ASPNET_SESSIONID_COOKIE, value: aspNetSessionId };
+  }
+  
+  logger.debug('No session cookie found');
   return null;
 };
 
@@ -113,11 +120,11 @@ export const realCallService = async (
       logger.debug('Added session ID to Authorization header');
     }
     
-    // Explicitly add ASP.NET_SessionId cookie to the request if it exists
-    const aspNetSessionId = getAspNetSessionId();
-    if (aspNetSessionId) {
-      logger.debug('Adding ASP.NET_SessionId to request headers');
-      headers['Cookie'] = `ASP.NET_SessionId=${aspNetSessionId}`;
+    // Explicitly add session cookie to the request if it exists
+    const sessionCookie = getSessionCookie();
+    if (sessionCookie) {
+      logger.debug(`Adding ${sessionCookie.name} to request headers`);
+      headers['Cookie'] = `${sessionCookie.name}=${sessionCookie.value}`;
     }
     
     // Log cookies for debugging (only in browser environment)

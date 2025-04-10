@@ -1,4 +1,5 @@
 import { TCItem, TCPropertyInfo, TCSearchResponse, TCObject, TCSession } from './types.js';
+import logger from '../logger.js';
 
 // Parse the JSON response based on the service and operation
 export const parseJSONResponse = (service: string, operation: string, response: Record<string, unknown>): unknown => {
@@ -93,7 +94,7 @@ export const parseJSONResponse = (service: string, operation: string, response: 
   }
   
   // Default response handling for unimplemented operations
-  console.warn(`Unimplemented JSON response parsing for service: ${service}.${operation}`);
+  logger.warn(`Unimplemented JSON response parsing for service: ${service}.${operation}`);
   return response;
 };
 

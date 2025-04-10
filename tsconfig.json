@@ -12,6 +12,6 @@
     "skipLibCheck": true,
     "baseUrl": "."
   },
-  "include": ["src/**/*", "src/services/**/*", "teamcenter", "index.ts"],
+  "include": ["src/**/*", "src/services/**/*", "teamcenter", "index.ts", "logger.ts"],
   "exclude": ["node_modules", "build"]
 }

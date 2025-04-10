@@ -2,6 +2,7 @@
 import { TCSOAClientConfig } from './types.js';
 import { realCallService } from './tcApiService.js';
 import { mockCallService } from './tcMockService.js';
+import logger from '../logger.js';
 
 export interface SOAClient {
   config: TCSOAClientConfig;
@@ -45,7 +46,7 @@ export const createSOAClient = (
           // Update session ID if provided in the response
           if (resultObj.sessionId) {
             sessionId = resultObj.sessionId;
-            console.log('Session ID updated:', sessionId);
+            logger.debug(`Session ID updated: ${sessionId}`);
           }
           
           // Return just the data part for consistency
@@ -54,7 +55,7 @@ export const createSOAClient = (
         
         return result;
       } catch (error) {
-        console.error(`SOA client error (${service}.${operation}):`, error);
+        logger.error(`SOA client error (${service}.${operation}):`, error);
         throw error;
       }
     }

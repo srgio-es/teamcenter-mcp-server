@@ -9,12 +9,7 @@ import {
 import { storeSession, retrieveSession, clearSession } from './tcUtils.js';
 import { convertToTCObject } from './tcResponseParser.js';
 import { SOAClient, createSOAClient } from './tcSOAClient.js';
-
-// Simple logger implementation
-const console = {
-  log: (...args: any[]) => globalThis.console.log(...args),
-  error: (...args: any[]) => globalThis.console.error(...args)
-};
+import logger from '../logger.js';
 
 // Default teamcenter config - will be overridden by global config
 const defaultTeamcenterConfig = {
@@ -28,11 +23,11 @@ const defaultTeamcenterConfig = {
 const getTeamcenterConfig = () => {
   // Always check the global config first
   if ((globalThis as any).teamcenterConfig) {
-    console.log('Getting teamcenterConfig from global:', (globalThis as any).teamcenterConfig);
+    logger.debug('Getting teamcenterConfig from global:', (globalThis as any).teamcenterConfig);
     return (globalThis as any).teamcenterConfig;
   }
   
-  console.log('Using default teamcenterConfig:', defaultTeamcenterConfig);
+  logger.debug('Using default teamcenterConfig:', defaultTeamcenterConfig);
   return defaultTeamcenterConfig;
 };
 
@@ -59,7 +54,7 @@ class TeamcenterService {
     this.soaClient = createSOAClient(getTeamcenterConfig(), sessionId);
     
     if (sessionId) {
-      console.log('Teamcenter session restored from browser storage');
+      logger.info('Teamcenter session restored from browser storage');
     }
   }
 
@@ -68,7 +63,7 @@ class TeamcenterService {
       if (!this.soaClient) {
         throw new Error('SOA client is not initialized');
       }
-      
+    
       // Directly pass username and password to match the expected structure in createJSONRequest
       const session = await this.soaClient.callService(
         'Core-2011-06-Session',
@@ -81,7 +76,7 @@ class TeamcenterService {
       
       return { data: session };
     } catch (error) {
-      console.error('Teamcenter login error:', error);
+      logger.error('Teamcenter login error:', error);
       return {
         error: {
           code: 'LOGIN_ERROR',
@@ -158,7 +153,7 @@ class TeamcenterService {
       const tcObjects = response.objects?.map(obj => convertToTCObject(obj)) || [];
       return { data: tcObjects };
     } catch (error) {
-      console.error('Error fetching user owned items:', error);
+      logger.error('Error fetching user owned items:', error);
       return {
         error: {
           code: 'SEARCH_ERROR',
@@ -236,7 +231,7 @@ class TeamcenterService {
       const tcObjects = response.objects?.map(obj => convertToTCObject(obj)) || [];
       return { data: tcObjects };
     } catch (error) {
-      console.error('Error fetching last created items:', error);
+      logger.error('Error fetching last created items:', error);
       return {
         error: {
           code: 'SEARCH_ERROR',
@@ -273,7 +268,7 @@ class TeamcenterService {
       
       return { data: undefined };
     } catch (error) {
-      console.error('Teamcenter logout error:', error);
+      logger.error('Teamcenter logout error:', error);
       return {
         error: {
           code: 'LOGOUT_ERROR',

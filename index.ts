@@ -11,6 +11,7 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import * as dotenv from 'dotenv';
+import logger from './logger.js';
 
 // Import Teamcenter types
 import { TCCredentials, TCSearchOptions, TCObject, TCResponse } from './teamcenter/types.js';
@@ -26,10 +27,10 @@ const TEAMCENTER_PASSWORD = process.env.TEAMCENTER_PASSWORD;
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
 // Debug logging for environment variables
-console.log('Environment variables:');
-console.log('TEAMCENTER_BASE_URL:', TEAMCENTER_BASE_URL);
-console.log('TEAMCENTER_USERNAME:', TEAMCENTER_USERNAME);
-console.log('MOCK_MODE:', MOCK_MODE);
+logger.debug('Environment variables:');
+logger.debug(`TEAMCENTER_BASE_URL: ${TEAMCENTER_BASE_URL}`);
+logger.debug(`TEAMCENTER_USERNAME: ${TEAMCENTER_USERNAME}`);
+logger.debug(`MOCK_MODE: ${MOCK_MODE}`);
 
 if (!MOCK_MODE && (!TEAMCENTER_BASE_URL || !TEAMCENTER_USERNAME || !TEAMCENTER_PASSWORD)) {
   throw new Error('Missing required environment variables for Teamcenter configuration. Set MOCK_MODE=true to use mock data.');
@@ -44,7 +45,7 @@ const teamcenterConfig = {
   mockMode: MOCK_MODE
 };
 
-console.log(`Starting Teamcenter MCP server in ${MOCK_MODE ? 'MOCK' : 'REAL'} mode`);
+logger.info(`Starting Teamcenter MCP server in ${MOCK_MODE ? 'MOCK' : 'REAL'} mode`);
 
 // Set up environment for teamcenterService
 (global as any).teamcenterConfig = teamcenterConfig;
@@ -83,7 +84,7 @@ if (!('getItemTypes' in typedTeamcenterService)) {
       );
       return { data: result };
     } catch (error) {
-      console.error('Error getting item types:', error);
+      logger.error('Error getting item types:', error);
       return {
         error: {
           code: 'API_ERROR',
@@ -106,7 +107,7 @@ if (!('getItemById' in typedTeamcenterService)) {
       );
       return { data: result };
     } catch (error) {
-      console.error('Error getting item by ID:', error);
+      logger.error('Error getting item by ID:', error);
       return {
         error: {
           code: 'API_ERROR',
@@ -178,7 +179,7 @@ if (!('searchItems' in typedTeamcenterService)) {
       // Cast the result to TCObject[] to satisfy TypeScript
       return { data: result as unknown as TCObject[] };
     } catch (error) {
-      console.error('Error searching items:', error);
+      logger.error('Error searching items:', error);
       return {
         error: {
           code: 'SEARCH_ERROR',
@@ -212,7 +213,7 @@ if (!('createItem' in typedTeamcenterService)) {
       
       return { data: result };
     } catch (error) {
-      console.error('Error creating item:', error);
+      logger.error('Error creating item:', error);
       return {
         error: {
           code: 'CREATE_ERROR',
@@ -244,7 +245,7 @@ if (!('updateItem' in typedTeamcenterService)) {
       
       return { data: result };
     } catch (error) {
-      console.error('Error updating item:', error);
+      logger.error('Error updating item:', error);
       return {
         error: {
           code: 'UPDATE_ERROR',
@@ -278,7 +279,7 @@ class TeamcenterServer {
     this.setupToolHandlers();
     
     // Error handling
-    this.server.onerror = (error) => console.error('[MCP Error]', error);
+    this.server.onerror = (error) => logger.error('[MCP Error]', error);
     process.on('SIGINT', async () => {
       await this.server.close();
       process.exit(0);
@@ -850,16 +851,16 @@ class TeamcenterServer {
           throw new Error(`Authentication failed: ${loginResponse.error.message}`);
         }
         
-        console.error('Successfully authenticated with Teamcenter');
+        logger.info('Successfully authenticated with Teamcenter');
       } else {
-        console.error('Running in MOCK mode - no authentication required');
+        logger.info('Running in MOCK mode - no authentication required');
       }
       
       const transport = new StdioServerTransport();
       await this.server.connect(transport);
-      console.error('Teamcenter MCP server running on stdio');
+      logger.info('Teamcenter MCP server running on stdio');
     } catch (error) {
-      console.error('Failed to start Teamcenter MCP server:', error);
+      logger.error('Failed to start Teamcenter MCP server:', error);
       process.exit(1);
     }
   }
@@ -867,4 +868,4 @@ class TeamcenterServer {
 
 // Start the server
 const server = new TeamcenterServer();
-server.run().catch(console.error);
+server.run().catch((error) => logger.error('Server run error:', error));

@@ -1,5 +1,6 @@
 
 import { TCCredentials, TCSearchOptions, TCSearchResponse } from './types.js';
+import logger from '../logger.js';
 
 // Mock service implementation
 export const mockCallService = async (
@@ -7,7 +8,7 @@ export const mockCallService = async (
   operation: string, 
   params: unknown
 ): Promise<unknown> => {
-  console.log(`SOA call (MOCK MODE): ${service}.${operation}`, params);
+  logger.debug(`SOA call (MOCK MODE): ${service}.${operation}`, params);
   
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -61,7 +62,7 @@ export const mockCallService = async (
     const searchParams = (params as any).searchInput || {};
     const savedQueryName = searchParams.searchCriteria?.savedQueryName;
     
-    console.log(`Performing search with saved query: ${savedQueryName}`);
+    logger.debug(`Performing search with saved query: ${savedQueryName}`);
     
     // Mock search results for the new API format
     const mockItems = [
