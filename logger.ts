@@ -9,8 +9,8 @@ if (!fs.existsSync(logsDir)) {
 }
 
 // Define log file paths
-const logFilePath = path.join(logsDir, 'teamcenter-server.log');
-const errorLogFilePath = path.join(logsDir, 'teamcenter-server-error.log');
+const logFilePath = path.join(logsDir, 'teamcenter-mcp-server.log');
+const errorLogFilePath = path.join(logsDir, 'teamcenter-mcp-server-error.log');
 
 // Custom format for log messages
 const logFormat = winston.format.combine(
@@ -27,7 +27,7 @@ const logFormat = winston.format.combine(
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: logFormat,
-  defaultMeta: { service: 'teamcenter-server' },
+  defaultMeta: { service: 'teamcenter-mcp-server' },
   transports: [
     // Write all logs to the combined log file
     new winston.transports.File({ 

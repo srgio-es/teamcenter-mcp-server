@@ -56,7 +56,7 @@
 ### Project Structure
 
 ```
-teamcenter-server/
+teamcenter-mcp-server/
 ├── .env                  # Environment variables for local development
 ├── index.ts              # Main entry point and MCP server implementation
 ├── package.json          # Project dependencies and scripts
@@ -106,7 +106,7 @@ teamcenter-server/
        "mcpServers": {
          "teamcenter": {
            "command": "node",
-           "args": ["/path/to/teamcenter-server/build/index.js"],
+           "args": ["/path/to/teamcenter-mcp-server/build/index.js"],
            "env": {
              "TEAMCENTER_BASE_URL": "YOUR_TEAMCENTER_BASE_URL",
              "TEAMCENTER_USERNAME": "YOUR_TEAMCENTER_USERNAME",

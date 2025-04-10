@@ -22,7 +22,7 @@ The Teamcenter MCP server provides the following capabilities:
 
 ## Setup
 
-1. The server has been installed in `/home/sergio/Cline/MCP/teamcenter-server`
+1. The server has been installed in `/home/sergio/Cline/MCP/teamcenter-mcp-server`
 2. The MCP configuration has been added to the Claude settings file
 
 ### Configuration
@@ -40,7 +40,7 @@ Replace the placeholder values with your actual Teamcenter credentials:
   "mcpServers": {
     "teamcenter": {
       "command": "node",
-      "args": ["/home/sergio/Cline/MCP/teamcenter-server/build/index.js"],
+      "args": ["/home/sergio/Cline/MCP/teamcenter-mcp-server/build/index.js"],
       "env": {
         "TEAMCENTER_BASE_URL": "YOUR_TEAMCENTER_BASE_URL",
         "TEAMCENTER_USERNAME": "YOUR_TEAMCENTER_USERNAME",
@@ -144,10 +144,10 @@ uri: teamcenter://search/engine
 
 ## Development
 
-If you need to modify the server, the source code is in `/home/sergio/Cline/MCP/teamcenter-server/src/index.ts`. After making changes, rebuild the server with:
+If you need to modify the server, the source code is in `/home/sergio/Cline/MCP/teamcenter-mcp-server/src/index.ts`. After making changes, rebuild the server with:
 
 ```bash
-cd /home/sergio/Cline/MCP/teamcenter-server
+cd /home/sergio/Cline/MCP/teamcenter-mcp-server
 npm run build
 ```
 
@@ -169,7 +169,7 @@ TEAMCENTER_PASSWORD=your_password
 3. Run the server locally using the development script:
 
 ```bash
-cd /home/sergio/Cline/MCP/teamcenter-server
+cd /home/sergio/Cline/MCP/teamcenter-mcp-server
 npm run dev
 ```
 

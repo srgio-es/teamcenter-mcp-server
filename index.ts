@@ -262,7 +262,7 @@ class TeamcenterServer {
   constructor() {
     this.server = new Server(
       {
-        name: 'teamcenter-server',
+        name: 'teamcenter-mcp-server',
         version: '0.1.0',
       },
       {

@@ -1,5 +1,5 @@
 {
-  "name": "teamcenter-server",
+  "name": "teamcenter-mcp-server",
   "version": "1.0.0",
   "main": "build/index.js",
   "type": "module",
