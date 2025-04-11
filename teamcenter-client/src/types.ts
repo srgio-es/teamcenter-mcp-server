@@ -194,3 +194,22 @@ export interface TeamcenterServiceOptions {
   logger?: Logger;
   config: TeamcenterConfig;
 }
+
+// Interface for TeamcenterService
+export interface ITeamcenterService {
+  isLoggedIn(): boolean;
+  getSessionId(): string | null;
+  login(credentials: TCCredentials): Promise<TCResponse<TCSession>>;
+  logout(): Promise<TCResponse<void>>;
+  getUserOwnedItems(): Promise<TCResponse<TCObject[]>>;
+  getLastCreatedItems(limit?: number): Promise<TCResponse<TCObject[]>>;
+  getSessionInfo(): Promise<TCResponse<any>>;
+  getFavorites(): Promise<TCResponse<any>>;
+  getUserProperties(uid: string, attributes?: string[]): Promise<TCResponse<any>>;
+  getLoggedUserProperties(attributes?: string[]): Promise<TCResponse<any>>;
+  getItemTypes(): Promise<TCResponse<any>>;
+  getItemById(itemId: string): Promise<TCResponse<any>>;
+  searchItems(query: string, type?: string, limit?: number): Promise<TCResponse<TCObject[]>>;
+  createItem(type: string, name: string, description?: string, properties?: Record<string, any>): Promise<TCResponse<any>>;
+  updateItem(itemId: string, properties: Record<string, any>): Promise<TCResponse<any>>;
+}

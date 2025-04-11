@@ -25,7 +25,8 @@ export {
   TCDataset,
   TCSOAClientConfig,
   TeamcenterConfig,
-  TeamcenterServiceOptions
+  TeamcenterServiceOptions,
+  ITeamcenterService
 } from './types.js';
 
 // Export utility functions

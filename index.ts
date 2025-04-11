@@ -375,6 +375,43 @@ class TeamcenterServer {
             properties: {},
           },
         },
+        {
+          name: 'get_user_properties',
+          description: 'Get properties of a specific user by UID',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              uid: {
+                type: 'string',
+                description: 'User UID',
+              },
+              attributes: {
+                type: 'array',
+                items: {
+                  type: 'string'
+                },
+                description: 'Optional array of specific attributes to retrieve',
+              },
+            },
+            required: ['uid'],
+          },
+        },
+        {
+          name: 'get_logged_user_properties',
+          description: 'Get properties of the currently logged-in user',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              attributes: {
+                type: 'array',
+                items: {
+                  type: 'string'
+                },
+                description: 'Optional array of specific attributes to retrieve',
+              },
+            },
+          },
+        },
       ],
     }));
 
@@ -689,6 +726,69 @@ class TeamcenterServer {
                   {
                     type: 'text',
                     text: `Failed to get favorites: ${response.error.message}`,
+                  },
+                ],
+                isError: true,
+              };
+            }
+            
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case 'get_user_properties': {
+            const { uid, attributes } = request.params.arguments as {
+              uid: string;
+              attributes?: string[];
+            };
+            
+            if (!uid) {
+              throw new McpError(ErrorCode.InvalidParams, 'User UID is required');
+            }
+            
+            const response = await teamcenterService.getUserProperties(uid, attributes);
+            
+            if (response.error) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Failed to get user properties: ${response.error.message}`,
+                  },
+                ],
+                isError: true,
+              };
+            }
+            
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case 'get_logged_user_properties': {
+            const { attributes } = request.params.arguments as {
+              attributes?: string[];
+            };
+            
+            const response = await teamcenterService.getLoggedUserProperties(attributes);
+            
+            if (response.error) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Failed to get logged user properties: ${response.error.message}`,
                   },
                 ],
                 isError: true,

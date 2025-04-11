@@ -4,7 +4,7 @@
   "main": "build/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc && chmod +x build/index.js",
+    "build": "cd teamcenter-client && npm run build && cd .. && tsc && chmod +x build/index.js",
     "start": "node build/index.js",
     "dev": "ts-node --esm src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",

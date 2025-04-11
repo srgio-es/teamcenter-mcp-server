@@ -6,7 +6,8 @@ import {
   TCSearchResponse,
   TCObject,
   TeamcenterConfig,
-  TeamcenterServiceOptions
+  TeamcenterServiceOptions,
+  ITeamcenterService
 } from './types.js';
 import { storeSession, retrieveSession, clearSession, isValidSession } from './tcUtils.js';
 import { convertToTCObject, getPropertyValue } from './tcResponseParser.js';
@@ -18,7 +19,7 @@ import { Logger, createDefaultLogger } from './logger.js';
  * TeamcenterService class provides a unified interface for interacting with Teamcenter
  * It handles session management, error handling, and provides a consistent API
  */
-export class TeamcenterService {
+export class TeamcenterService implements ITeamcenterService {
   private soaClient: SOAClient | null = null;
   private sessionInfo: TCSession | null = null;
   private logger: Logger;
@@ -497,6 +498,150 @@ export class TeamcenterService {
       };
     }
   }
+
+  /**
+   * Get user properties from Teamcenter
+   * @param uid The UID of the user to get properties for
+   * @param attributes Optional array of specific attributes to retrieve (defaults to a standard set if not provided)
+   * @returns A response containing the user properties or an error
+   */
+  async getUserProperties(uid: string, attributes?: string[]): Promise<TCResponse<any>> {
+    const serviceRequestId = `service_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    this.logger.debug(`[${serviceRequestId}] TeamcenterService.getUserProperties called for user UID: ${uid}`);
+
+    // Check if user is logged in
+    if (!this.isLoggedIn()) {
+      this.logger.debug(`[${serviceRequestId}] TeamcenterService.getUserProperties failed: No session`);
+      return this.createNotLoggedInError('getUserProperties');
+    }
+
+    // Validate parameters
+    if (!uid) {
+      return {
+        error: {
+          code: 'INVALID_PARAMETER',
+          level: 'ERROR',
+          message: 'User UID is required'
+        }
+      };
+    }
+
+    try {
+      if (!this.soaClient) {
+        throw new AppError(
+          'SOA client is not initialized',
+          ErrorType.UNKNOWN,
+          null,
+          { method: 'getUserProperties' }
+        );
+      }
+
+      // Default attributes to retrieve if not specified
+      const defaultAttributes = [
+        "user_id", 
+        "person", 
+        "os_username", 
+        "last_login_time", 
+        "volume", 
+        "home_folder"
+      ];
+
+      // Prepare the request payload
+      const payload = {
+          objects: [{
+            uid: uid,
+            className: "User",
+            type: "User"
+          }],
+          attributes: attributes || defaultAttributes
+        };
+        
+      this.logger.debug(`[${serviceRequestId}] Payload for getUserProperties:`, payload);
+
+      const result = await this.soaClient.callService(
+        'Core-2006-03-DataManagement',
+        'getProperties',
+        payload
+      );
+
+      this.logger.debug(`[${serviceRequestId}] TeamcenterService.getUserProperties successful for user UID: ${uid}`);
+      return { data: result };
+    } catch (error) {
+      this.logger.error(`[${serviceRequestId}] Error getting user properties:`, error);
+      return {
+        error: {
+          code: 'USER_PROPERTIES_ERROR',
+          level: 'ERROR',
+          message: error instanceof Error ? error.message : 'Failed to retrieve user properties'
+        }
+      };
+    }
+  }
+
+  /**
+   * Get properties of the currently logged-in user
+   * @param attributes Optional array of specific attributes to retrieve
+   * @returns A response containing the current user's properties or an error
+   */
+  async getLoggedUserProperties(attributes?: string[]): Promise<TCResponse<any>> {
+    const serviceRequestId = `service_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    this.logger.debug(`[${serviceRequestId}] TeamcenterService.getLoggedUserProperties called`);
+
+    // Check if user is logged in
+    if (!this.isLoggedIn()) {
+      this.logger.debug(`[${serviceRequestId}] TeamcenterService.getLoggedUserProperties failed: No session`);
+      return this.createNotLoggedInError('getLoggedUserProperties');
+    }
+
+    try {
+      if (!this.soaClient) {
+        throw new AppError(
+          'SOA client is not initialized',
+          ErrorType.UNKNOWN,
+          null,
+          { method: 'getLoggedUserProperties' }
+        );
+      }
+
+      // First, get the session info to retrieve the current user's UID
+      const sessionInfoResponse = await this.getSessionInfo();
+      
+      if (sessionInfoResponse.error) {
+        throw new AppError(
+          `Failed to get session info: ${sessionInfoResponse.error.message}`,
+          ErrorType.API_RESPONSE,
+          null,
+          { method: 'getLoggedUserProperties' }
+        );
+      }
+
+      // Extract the user UID from the session info
+      const sessionInfo = sessionInfoResponse.data;
+      if (!sessionInfo || !sessionInfo.user || !sessionInfo.user.uid) {
+        throw new AppError(
+          'Could not retrieve current user UID from session info',
+          ErrorType.DATA_PARSING,
+          null,
+          { method: 'getLoggedUserProperties' }
+        );
+      }
+
+      const userUid = sessionInfo.user.uid;
+      this.logger.debug(`[${serviceRequestId}] Retrieved current user UID: ${userUid}`);
+
+      // Now get the user properties using the retrieved UID
+      return await this.getUserProperties(userUid, attributes);
+    } catch (error) {
+      this.logger.error(`[${serviceRequestId}] Error getting logged user properties:`, error);
+      return {
+        error: {
+          code: 'USER_PROPERTIES_ERROR',
+          level: 'ERROR',
+          message: error instanceof Error ? error.message : 'Failed to retrieve logged user properties'
+        }
+      };
+    }
+  }
   
   /**
    * Get available item types in Teamcenter
@@ -853,6 +998,6 @@ export class TeamcenterService {
  * @param options Configuration options for the service
  * @returns A new TeamcenterService instance
  */
-export const createTeamcenterService = (options: TeamcenterServiceOptions): TeamcenterService => {
+export const createTeamcenterService = (options: TeamcenterServiceOptions): ITeamcenterService => {
   return new TeamcenterService(options);
 };
