@@ -856,6 +856,9 @@ class TeamcenterServer {
   }
 }
 
+// Export the TeamcenterServer class for testing
+export { TeamcenterServer };
+
 // Start the server
 const server = new TeamcenterServer();
 server.run().catch((error) => logger.error('Server run error:', error));

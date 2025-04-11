@@ -8,9 +8,10 @@
     "outDir": "dist",
     "declaration": true,
     "sourceMap": true,
-    "rootDir": "src",
-    "skipLibCheck": true
+    "rootDir": ".",
+    "skipLibCheck": true,
+    "isolatedModules": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "__tests__/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }

@@ -4,16 +4,18 @@
  */
 
 // Export logger interface and default implementation
-export { Logger, createDefaultLogger } from './logger.js';
+export type { Logger } from './logger.js';
+export { createDefaultLogger } from './logger.js';
 
 // Export main service
 export { TeamcenterService, createTeamcenterService } from './teamcenterService.js';
 
 // Export SOA client
-export { SOAClient, createSOAClient } from './tcSOAClient.js';
+export type { SOAClient } from './tcSOAClient.js';
+export { createSOAClient } from './tcSOAClient.js';
 
 // Export types
-export {
+export type {
   TCCredentials,
   TCSession,
   TCResponse,

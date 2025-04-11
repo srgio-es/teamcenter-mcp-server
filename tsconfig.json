@@ -10,8 +10,9 @@
     "sourceMap": true,
     "rootDir": ".",
     "skipLibCheck": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "isolatedModules": true
   },
-  "include": ["src/**/*", "src/services/**/*", "index.ts", "logger.ts"],
+  "include": ["src/**/*", "src/services/**/*", "index.ts", "logger.ts", "__tests__/**/*"],
   "exclude": ["node_modules", "build", "teamcenter", "teamcenter-client"]
 }

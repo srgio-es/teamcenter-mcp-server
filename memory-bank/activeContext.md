@@ -14,84 +14,113 @@ The Teamcenter MCP Server is currently in a functional state with core features 
 The current focus is on:
 
 1. **Documentation**: Creating comprehensive documentation for the server, including this Memory Bank
-2. **Testing**: Ensuring all functionality works as expected with real Teamcenter instances
-3. **Error Handling**: Improving error handling and recovery mechanisms
-4. **User Experience**: Refining the response formats to be more user-friendly
+2. **Testing**: Implementing automated tests for all functionality with Jest
+3. **CI/CD**: Setting up GitHub Actions for continuous integration
+4. **Error Handling**: Improving error handling and recovery mechanisms
+5. **User Experience**: Refining the response formats to be more user-friendly
 
 ## Recent Changes
 
-1. **MCP Server Implementation**:
+1. **Testing Implementation**:
+   - Added Jest testing framework for both main server and client library
+   - Created test configuration files (jest.config.js)
+   - Implemented initial tests for core functionality
+   - Set up test mocks for external dependencies
+   - Added test coverage reporting
+
+2. **CI/CD Setup**:
+   - Created GitHub Actions workflow for continuous integration
+   - Configured CI to run on push to main and pull requests
+   - Set up linting, building, and testing in the CI pipeline
+   - Added coverage reporting to Codecov
+
+3. **Code Quality Tools**:
+   - Added ESLint for TypeScript code linting
+   - Created ESLint configuration files for both projects
+   - Added npm scripts for linting and fixing issues
+
+4. **Documentation**:
+   - Created TESTING.md with detailed information about testing and CI
+   - Updated code to support better testability (e.g., exporting TeamcenterServer class)
+
+5. **MCP Server Implementation**:
    - Implemented the core MCP server structure in index.ts
    - Set up resource and tool handlers
    - Added error handling and logging
    - Added support for additional tools including get_session_info, get_favorites, get_user_properties, and get_logged_user_properties
    - Implemented comprehensive request/response logging with unique request IDs
 
-2. **Teamcenter Service Layer**:
+6. **Teamcenter Service Layer**:
    - Implemented the teamcenterService as a singleton
    - Added methods for common Teamcenter operations
    - Implemented session management
    - Added dynamic method creation for missing service methods
    - Added support for retrieving user properties and session information
 
-3. **SOA Client**:
+7. **SOA Client**:
    - Created a client for Teamcenter's SOA API
    - Implemented authentication and session handling
    - Added request/response formatting
    - Improved session cookie management
    - Added client-level request tracing with unique IDs
 
-4. **Response Parsing**:
+8. **Response Parsing**:
    - Added utilities to transform Teamcenter responses
    - Standardized error handling
    - Created consistent object formats
    - Enhanced logging for API responses
 
-5. **Error Handling**:
+9. **Error Handling**:
    - Implemented AppError class with specific error types (API_RESPONSE, DATA_PARSING, AUTH_SESSION, etc.)
    - Added specialized error handling functions for different error scenarios
    - Improved error messages for better user understanding
    - Enhanced error logging with context information
 
-6. **Configuration**:
-   - Set up environment-based configuration
-   - Added support for .env files for local development
-   - Documented configuration options
-   - Added mock mode toggle for testing without Teamcenter
+10. **Configuration**:
+    - Set up environment-based configuration
+    - Added support for .env files for local development
+    - Documented configuration options
+    - Added mock mode toggle for testing without Teamcenter
 
-7. **Browser Compatibility Fix**:
-   - Fixed browser-specific code in Node.js environment
-   - Added environment detection for document and window objects
-   - Modified fetch API usage to work in both browser and Node.js
-   - Improved error handling for AbortController
+11. **Browser Compatibility Fix**:
+    - Fixed browser-specific code in Node.js environment
+    - Added environment detection for document and window objects
+    - Modified fetch API usage to work in both browser and Node.js
+    - Improved error handling for AbortController
 
 ## Next Steps
 
 ### Short-term Tasks
 
-1. **Enhanced Error Handling**:
+1. **Enhanced Testing**:
+   - Add more comprehensive tests for all components
+   - Increase test coverage to at least 80%
+   - Add integration tests for key workflows
+   - Implement test fixtures for common test scenarios
+
+2. **CI/CD Improvements**:
+   - Add automated versioning and release management
+   - Set up deployment workflows for different environments
+   - Add code quality checks (e.g., SonarQube)
+   - Implement automated dependency updates
+
+3. **Enhanced Error Handling**:
    - Add more specific error types ✅
    - Improve error messages for better user understanding ✅
    - Implement automatic retry for transient errors
    - Add comprehensive error telemetry ✅
 
-2. **Performance Optimization**:
+4. **Performance Optimization**:
    - Add caching for frequently accessed resources
    - Optimize search queries for better performance
    - Implement request batching where appropriate
    - Add response compression for large datasets
 
-3. **Additional Tools**:
+5. **Additional Tools**:
    - Add support for Teamcenter workflows
    - Implement document management tools
    - Add visualization capabilities
    - Support for relationship management between items
-
-4. **Testing Improvements**:
-   - Create automated tests for all functionality
-   - Set up CI/CD pipeline
-   - Add integration tests with mock Teamcenter server
-   - Implement load testing for performance benchmarking
 
 ### Medium-term Goals
 
@@ -134,6 +163,16 @@ The current focus is on:
    - Rationale: Improves traceability and debugging
    - Trade-offs: Adds some overhead but significantly improves troubleshooting
 
+5. **Testing Strategy**:
+   - Decision: Use Jest with TypeScript for testing
+   - Rationale: Provides a modern testing framework with good TypeScript support
+   - Trade-offs: Requires additional configuration for ESM support but offers better developer experience
+
+6. **CI/CD Approach**:
+   - Decision: Use GitHub Actions for CI/CD
+   - Rationale: Tight integration with GitHub, easy to configure, and free for public repositories
+   - Trade-offs: Limited to GitHub ecosystem but sufficient for project needs
+
 ### Technical Debt
 
 1. **Type Definitions**:
@@ -150,8 +189,8 @@ The current focus is on:
    - Standardize error codes across the application
 
 3. **Testing Coverage**:
-   - Limited automated tests
-   - Need to add more comprehensive test coverage
+   - Initial tests implemented but coverage is not comprehensive
+   - Need to add more tests for edge cases and error scenarios
    - Plan to implement integration tests with mock Teamcenter server
    - Add unit tests for utility functions and core logic
 
@@ -182,6 +221,12 @@ The current focus is on:
    - Use AppError class with specific error types for better categorization
    - Log errors for debugging but don't expose sensitive information
 
+4. **Testing Patterns**:
+   - Use descriptive test names following the pattern "should [expected behavior]"
+   - Group related tests using describe blocks
+   - Mock external dependencies to isolate the code being tested
+   - Test both success and error cases
+
 ### API Design Principles
 
 1. **Consistency**:
@@ -200,6 +245,12 @@ The current focus is on:
    - Handle edge cases and error conditions
    - Provide meaningful error messages
    - Log all requests and responses for traceability
+
+4. **Testability**:
+   - Design code to be easily testable
+   - Use dependency injection where appropriate
+   - Export classes and functions for testing
+   - Use interfaces for better mocking
 
 ## Learnings and Project Insights
 
@@ -229,6 +280,12 @@ The current focus is on:
    - Need to check for environment type before using environment-specific APIs
    - Fetch API implementation differs between environments
 
+5. **Testing in ESM Environment**:
+   - Jest requires special configuration for ESM support
+   - Need to use the --experimental-vm-modules flag
+   - Import mocking works differently in ESM
+   - TypeScript paths need to be mapped correctly
+
 ### Process Improvements
 
 1. **Documentation First**:
@@ -246,3 +303,9 @@ The current focus is on:
    - Error messages should be user-friendly
    - Errors should provide actionable information
    - Error categorization improves debugging and analysis
+
+4. **Test-Driven Development**:
+   - Consider writing tests before implementing new features
+   - Tests help clarify requirements and expected behavior
+   - Tests provide confidence when making changes
+   - Continuous testing catches issues early
