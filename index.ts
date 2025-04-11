@@ -41,16 +41,16 @@ if (!MOCK_MODE && (!TEAMCENTER_BASE_URL || !TEAMCENTER_USERNAME || !TEAMCENTER_P
 
 // Create a logger adapter that uses the MCP server's logger
 const loggerAdapter: Logger = {
-  error: (message, ...meta) => logger.error(message, ...meta),
-  warn: (message, ...meta) => logger.warn(message, ...meta),
-  info: (message, ...meta) => logger.info(message, ...meta),
-  debug: (message, ...meta) => logger.debug(message, ...meta),
-  logTeamcenterRequest: (service, operation, params, requestId) => {
+  error: (message: string, ...meta: any[]) => logger.error(message, ...meta),
+  warn: (message: string, ...meta: any[]) => logger.warn(message, ...meta),
+  info: (message: string, ...meta: any[]) => logger.info(message, ...meta),
+  debug: (message: string, ...meta: any[]) => logger.debug(message, ...meta),
+  logTeamcenterRequest: (service: string, operation: string, params: unknown, requestId?: string) => {
     const reqId = requestId || `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     logger.info(`[${reqId}] TC REQUEST: ${service}.${operation}`, { params });
     return reqId;
   },
-  logTeamcenterResponse: (service, operation, response, requestId, error) => {
+  logTeamcenterResponse: (service: string, operation: string, response: unknown, requestId: string, error?: Error) => {
     if (error) {
       logger.error(`[${requestId}] TC RESPONSE ERROR: ${service}.${operation}`, { error: error.message });
     } else {
