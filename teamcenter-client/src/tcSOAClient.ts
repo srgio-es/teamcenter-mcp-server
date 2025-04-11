@@ -3,7 +3,7 @@ import { realCallService } from './tcApiService.js';
 import { mockCallService } from './tcMockService.js';
 import { storeSessionCookie, getSessionCookie, storeSession } from './tcUtils.js';
 import { AppError, ErrorType, handleApiError } from './tcErrors.js';
-import logger from '../logger.js';
+import { Logger, createDefaultLogger } from './logger.js';
 
 export interface SOAClient {
   config: TCSOAClientConfig;
@@ -11,15 +11,23 @@ export interface SOAClient {
   callService: (service: string, operation: string, params: unknown) => Promise<unknown>;
 }
 
+/**
+ * Create a new SOA client for Teamcenter API
+ * @param config The SOA client configuration
+ * @param initialSessionId The initial session ID or null
+ * @param logger Optional logger instance
+ * @returns A new SOA client instance
+ */
 export const createSOAClient = (
   config: TCSOAClientConfig, 
-  initialSessionId: string | null = null
+  initialSessionId: string | null = null,
+  logger: Logger = createDefaultLogger()
 ): SOAClient => {
   let sessionId = initialSessionId;
   
   // If we have a session cookie but no initialSessionId, use the cookie value
   if (!initialSessionId) {
-    const cookie = getSessionCookie();
+    const cookie = getSessionCookie(logger);
     if (cookie) {
       sessionId = cookie.value;
       logger.debug(`Using session ID from cookie: ${sessionId}`);
@@ -39,11 +47,11 @@ export const createSOAClient = (
       // When sessionId is updated, also update the session cookie
       // But only if we don't already have a cookie
       if (value) {
-        const existingCookie = getSessionCookie();
+        const existingCookie = getSessionCookie(logger);
         if (!existingCookie) {
           // Determine which cookie name to use (ASP.NET_SessionId by default)
           const cookieName = 'ASP.NET_SessionId';
-          storeSessionCookie(cookieName, value);
+          storeSessionCookie(cookieName, value, logger);
           logger.debug(`Updated session cookie: ${cookieName}=${value}`);
         } else {
           logger.debug(`Not updating cookie, using existing: ${existingCookie.name}=${existingCookie.value}`);
@@ -70,8 +78,8 @@ export const createSOAClient = (
       try {
         // Use mock service if mockMode is enabled
         const result = config.mockMode 
-          ? await mockCallService(service, operation, params)
-          : await realCallService(config, sessionId, service, operation, params);
+          ? await mockCallService(service, operation, params, logger)
+          : await realCallService(config, sessionId, service, operation, params, logger);
         
         // Add request tracing
         logger.debug(`[${clientRequestId}] SOA client call completed: ${service}.${operation}`);
@@ -87,7 +95,7 @@ export const createSOAClient = (
           // For login operations, we need to handle the session ID differently
           if (service === 'Core-2011-06-Session' && operation === 'login') {
             // The cookie from the Set-Cookie header has already been stored by tcApiService.ts
-            const cookie = getSessionCookie();
+            const cookie = getSessionCookie(logger);
             if (cookie) {
               // Use the cookie value as the session ID and store it
               sessionId = cookie.value;
@@ -96,7 +104,7 @@ export const createSOAClient = (
                 sessionId: cookie.value,
                 userId: resultObj.data?.userid || '',
                 userName: resultObj.data?.username || ''
-              });
+              }, logger);
               logger.debug(`[${clientRequestId}] Login: Updated session with cookie ID: ${sessionId}`);
             } else if (resultObj.sessionId) {
               // Only if no cookie was set, fall back to the sessionId from the response
@@ -129,7 +137,7 @@ export const createSOAClient = (
           throw error;
         } else {
           // Convert to AppError with proper context
-          throw handleApiError(error, `SOA client call to ${service}.${operation}`);
+          throw handleApiError(error, `SOA client call to ${service}.${operation}`, logger);
         }
       }
     }

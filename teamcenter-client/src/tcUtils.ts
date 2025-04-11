@@ -1,6 +1,6 @@
 import { TCSession } from './types.js';
 import { AppError, ErrorType, handleDataError } from './tcErrors.js';
-import logger from '../logger.js';
+import { Logger, createDefaultLogger } from './logger.js';
 
 // Cookie names for session persistence
 export const JSESSIONID_COOKIE = 'JSESSIONID';
@@ -19,25 +19,36 @@ let sessionCookie: SessionCookie | null = null;
  * Store the session cookie value
  * @param name The cookie name (JSESSIONID or ASP.NET_SessionId)
  * @param value The cookie value
+ * @param logger Optional logger instance
  */
-export const storeSessionCookie = (name: string, value: string): void => {
+export const storeSessionCookie = (
+  name: string, 
+  value: string, 
+  logger: Logger = createDefaultLogger()
+): void => {
   sessionCookie = { name, value };
   logger.debug(`Stored ${name} cookie with value: ${value}`);
 };
 
 /**
  * Get the stored session cookie
+ * @param logger Optional logger instance
  * @returns The session cookie object or null if not set
  */
-export const getSessionCookie = (): SessionCookie | null => {
+export const getSessionCookie = (
+  logger: Logger = createDefaultLogger()
+): SessionCookie | null => {
   logger.debug(`Retrieved cookie stored with name: ${sessionCookie?.name} and value: ${sessionCookie?.value}`);
   return sessionCookie;
 };
 
 /**
  * Clear the stored session cookie
+ * @param logger Optional logger instance
  */
-export const clearSessionCookie = (): void => {
+export const clearSessionCookie = (
+  logger: Logger = createDefaultLogger()
+): void => {
   sessionCookie = null;
   logger.debug('Session cookie cleared');
 };
@@ -45,11 +56,15 @@ export const clearSessionCookie = (): void => {
 /**
  * Store the Teamcenter session
  * @param session The session object to store
+ * @param logger Optional logger instance
  */
-export const storeSession = (session: TCSession): void => {
+export const storeSession = (
+  session: TCSession, 
+  logger: Logger = createDefaultLogger()
+): void => {
   try {
     // Check if we already have a session cookie
-    const existingCookie = getSessionCookie();
+    const existingCookie = getSessionCookie(logger);
     
     // Only store the session ID if we don't already have a cookie
     // This ensures we don't overwrite the cookie-based session ID with the one from the response body
@@ -58,7 +73,7 @@ export const storeSession = (session: TCSession): void => {
       // This is a heuristic - we'll prefer ASP.NET_SessionId by default
       // but could be configured based on server response headers
       const cookieName = ASPNET_SESSIONID_COOKIE;
-      storeSessionCookie(cookieName, session.sessionId);
+      storeSessionCookie(cookieName, session.sessionId, logger);
       logger.debug(`No cookie found, storing session ID as ${cookieName}`);
     } else if (existingCookie) {
       logger.debug(`Keeping existing cookie: ${existingCookie.name}=${existingCookie.value}`);
@@ -71,11 +86,14 @@ export const storeSession = (session: TCSession): void => {
 
 /**
  * Retrieve the Teamcenter session
+ * @param logger Optional logger instance
  * @returns The session object or null if not found
  */
-export const retrieveSession = (): TCSession | null => {
+export const retrieveSession = (
+  logger: Logger = createDefaultLogger()
+): TCSession | null => {
   // Get the session cookie
-  const cookie = getSessionCookie();
+  const cookie = getSessionCookie(logger);
   
   if (!cookie) {
     logger.debug('No session cookie found');
@@ -94,18 +112,25 @@ export const retrieveSession = (): TCSession | null => {
 
 /**
  * Clear the Teamcenter session
+ * @param logger Optional logger instance
  */
-export const clearSession = (): void => {
-  clearSessionCookie();
+export const clearSession = (
+  logger: Logger = createDefaultLogger()
+): void => {
+  clearSessionCookie(logger);
   logger.debug('Teamcenter session cleared');
 };
 
 /**
  * Validate a Teamcenter session object
  * @param session The session object to validate
+ * @param logger Optional logger instance
  * @returns True if the session is valid, false otherwise
  */
-export const isValidSession = (session: TCSession | null): boolean => {
+export const isValidSession = (
+  session: TCSession | null, 
+  logger: Logger = createDefaultLogger()
+): boolean => {
   if (!session) return false;
   
   // For our simplified session management, we only need the sessionId
@@ -122,9 +147,15 @@ export const isValidSession = (session: TCSession | null): boolean => {
  * @param service The service name
  * @param operation The operation name
  * @param params The operation parameters
+ * @param logger Optional logger instance
  * @returns The formatted request envelope
  */
-export const createJSONRequest = (service: string, operation: string, params: unknown): Record<string, unknown> => {
+export const createJSONRequest = (
+  service: string, 
+  operation: string, 
+  params: unknown, 
+  logger: Logger = createDefaultLogger()
+): Record<string, unknown> => {
   const requestId = `request_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   logger.debug(`[${requestId}] Creating JSON request envelope for ${service}.${operation}`);
   

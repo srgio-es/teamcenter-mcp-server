@@ -1,9 +1,21 @@
 import { TCItem, TCPropertyInfo, TCSearchResponse, TCObject, TCSession } from './types.js';
 import { AppError, ErrorType, handleDataError } from './tcErrors.js';
-import logger from '../logger.js';
+import { Logger, createDefaultLogger } from './logger.js';
 
-// Parse the JSON response based on the service and operation
-export const parseJSONResponse = (service: string, operation: string, response: Record<string, unknown>): unknown => {
+/**
+ * Parse the JSON response based on the service and operation
+ * @param service The service name
+ * @param operation The operation name
+ * @param response The response object
+ * @param logger Optional logger instance
+ * @returns The parsed response
+ */
+export const parseJSONResponse = (
+  service: string, 
+  operation: string, 
+  response: Record<string, unknown>,
+  logger: Logger = createDefaultLogger()
+): unknown => {
   const parserRequestId = `parser_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   logger.debug(`[${parserRequestId}] Parsing response for ${service}.${operation}`);
   
@@ -139,9 +151,13 @@ const getItemStatus = (props: Record<string, any>): TCObject['status'] => {
 /**
  * Convert a Teamcenter API object to a standardized TCObject
  * @param itemObj The Teamcenter item object to convert
+ * @param logger Optional logger instance
  * @returns A standardized TCObject
  */
-export const convertToTCObject = (itemObj: TCItem): TCObject => {
+export const convertToTCObject = (
+  itemObj: TCItem,
+  logger: Logger = createDefaultLogger()
+): TCObject => {
   const convertRequestId = `convert_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   logger.debug(`[${convertRequestId}] Converting Teamcenter item to TCObject: ${itemObj.uid}`);
   

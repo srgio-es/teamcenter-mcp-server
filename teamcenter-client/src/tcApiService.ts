@@ -2,7 +2,7 @@ import { TCSOAClientConfig } from './types.js';
 import { createJSONRequest, getSessionCookie, storeSessionCookie } from './tcUtils.js';
 import { parseJSONResponse } from './tcResponseParser.js';
 import { AppError, ErrorType, handleApiError, logError } from './tcErrors.js';
-import logger from '../logger.js';
+import { Logger, createDefaultLogger } from './logger.js';
 
 /**
  * Real API communication implementation for Teamcenter services
@@ -11,6 +11,7 @@ import logger from '../logger.js';
  * @param service The service name
  * @param operation The operation name
  * @param params The operation parameters
+ * @param logger Optional logger instance
  * @returns The response data
  */
 export const realCallService = async (
@@ -18,7 +19,8 @@ export const realCallService = async (
   sessionId: string | null,
   service: string,
   operation: string,
-  params: unknown
+  params: unknown,
+  logger: Logger = createDefaultLogger()
 ): Promise<unknown> => {
   // Form the REST endpoint URL
   const endpoint = `${config.endpoint}/${service}/${operation}`;
@@ -35,7 +37,7 @@ export const realCallService = async (
     }
     
     // Create JSON request body with the proper envelope structure
-    const jsonRequestBody = createJSONRequest(service, operation, params);
+    const jsonRequestBody = createJSONRequest(service, operation, params, logger);
     
     // Set up the headers
     const headers: HeadersInit = {
@@ -51,7 +53,7 @@ export const realCallService = async (
     }
     
     // Explicitly add session cookie to the request if it exists
-    const sessionCookie = getSessionCookie();
+    const sessionCookie = getSessionCookie(logger);
     if (sessionCookie) {
       logger.debug(`Adding ${sessionCookie.name} cookie to request headers`);
       headers['Cookie'] = `${sessionCookie.name}=${sessionCookie.value}`;
@@ -175,11 +177,11 @@ export const realCallService = async (
         if (cookieName.trim() === 'JSESSIONID') {
           logger.debug(`Found JSESSIONID cookie in response: ${cookieValue}`);
           // Store the session cookie for future requests
-          storeSessionCookie('JSESSIONID', cookieValue);
+          storeSessionCookie('JSESSIONID', cookieValue, logger);
         } else if (cookieName.trim() === 'ASP.NET_SessionId') {
           logger.debug(`Found ASP.NET_SessionId cookie in response: ${cookieValue}`);
           // Store the session cookie for future requests
-          storeSessionCookie('ASP.NET_SessionId', cookieValue);
+          storeSessionCookie('ASP.NET_SessionId', cookieValue, logger);
         }
       }
     }
@@ -194,7 +196,7 @@ export const realCallService = async (
       logger.debug(`[${requestId}] Response data:`, jsonData);
       
       // Parse the response
-      const parsedData = parseJSONResponse(service, operation, jsonData as Record<string, unknown>);
+      const parsedData = parseJSONResponse(service, operation, jsonData as Record<string, unknown>, logger);
       
       // Log the parsed response
       logger.logTeamcenterResponse(service, operation, parsedData, requestId);
@@ -229,7 +231,7 @@ export const realCallService = async (
       const apiError = handleApiError(error, `${service}.${operation}`);
       logger.logTeamcenterResponse(service, operation, null, requestId, apiError);
       // Log additional context for debugging
-      logError(apiError, `API call to ${service}.${operation}`);
+      logError(apiError, `API call to ${service}.${operation}`, logger);
       throw apiError;
     }
   }

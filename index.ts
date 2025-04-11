@@ -13,10 +13,19 @@ import {
 import * as dotenv from 'dotenv';
 import logger from './logger.js';
 
-// Import Teamcenter types
-import { TCCredentials, TCSearchOptions, TCSearchResponse, TCObject, TCResponse } from './teamcenter/types.js';
-import { initTeamcenterService, teamcenterService } from './teamcenter/teamcenterService.js';
-import { AppError, ErrorType } from './teamcenter/tcErrors.js';
+// Import from teamcenter-client package
+import {
+  createTeamcenterService,
+  TeamcenterService,
+  TCCredentials,
+  TCSearchOptions,
+  TCSearchResponse,
+  TCObject,
+  TCResponse,
+  Logger,
+  AppError,
+  ErrorType
+} from 'teamcenter-client';
 
 // Load environment variables from .env file for local testing
 dotenv.config();
@@ -37,6 +46,26 @@ if (!MOCK_MODE && (!TEAMCENTER_BASE_URL || !TEAMCENTER_USERNAME || !TEAMCENTER_P
   throw new Error('Missing required environment variables for Teamcenter configuration. Set MOCK_MODE=true to use mock data.');
 }
 
+// Create a logger adapter that uses the MCP server's logger
+const loggerAdapter: Logger = {
+  error: (message, ...meta) => logger.error(message, ...meta),
+  warn: (message, ...meta) => logger.warn(message, ...meta),
+  info: (message, ...meta) => logger.info(message, ...meta),
+  debug: (message, ...meta) => logger.debug(message, ...meta),
+  logTeamcenterRequest: (service, operation, params, requestId) => {
+    const reqId = requestId || `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    logger.info(`[${reqId}] TC REQUEST: ${service}.${operation}`, { params });
+    return reqId;
+  },
+  logTeamcenterResponse: (service, operation, response, requestId, error) => {
+    if (error) {
+      logger.error(`[${requestId}] TC RESPONSE ERROR: ${service}.${operation}`, { error: error.message });
+    } else {
+      logger.info(`[${requestId}] TC RESPONSE: ${service}.${operation}`, { response });
+    }
+  }
+};
+
 // Initialize Teamcenter configuration
 const teamcenterConfig = {
   endpoint: MOCK_MODE ? 'http://localhost:8080/tc' : (TEAMCENTER_BASE_URL as string),
@@ -46,11 +75,11 @@ const teamcenterConfig = {
 
 logger.info(`Starting Teamcenter MCP server in ${MOCK_MODE ? 'MOCK' : 'REAL'} mode`);
 
-// Set up environment for teamcenterService
-(global as any).teamcenterConfig = teamcenterConfig;
-
-// Initialize the teamcenterService after setting global config
-initTeamcenterService();
+// Create the Teamcenter service with the logger adapter
+const teamcenterService = createTeamcenterService({
+  logger: loggerAdapter,
+  config: teamcenterConfig
+});
 
 // MCP Server implementation
 class TeamcenterServer {

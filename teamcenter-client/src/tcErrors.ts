@@ -1,4 +1,4 @@
-import logger from '../logger.js';
+import { Logger, createDefaultLogger } from './logger.js';
 
 // Centralized error handling for Teamcenter services
 export enum ErrorType {
@@ -23,7 +23,7 @@ export class AppError extends Error {
   }
 }
 
-export const handleApiError = (error: unknown, context: string): AppError => {
+export const handleApiError = (error: unknown, context: string, logger?: Logger): AppError => {
   if (error instanceof AppError) {
     return error;
   }
@@ -36,7 +36,7 @@ export const handleApiError = (error: unknown, context: string): AppError => {
   );
 };
 
-export const handleDataError = (error: unknown, context: string): AppError => {
+export const handleDataError = (error: unknown, context: string, logger?: Logger): AppError => {
   if (error instanceof AppError) {
     return error;
   }
@@ -49,7 +49,7 @@ export const handleDataError = (error: unknown, context: string): AppError => {
   );
 };
 
-export const handleAuthError = (error: unknown, context: string): AppError => {
+export const handleAuthError = (error: unknown, context: string, logger?: Logger): AppError => {
   if (error instanceof AppError) {
     return error;
   }
@@ -62,7 +62,7 @@ export const handleAuthError = (error: unknown, context: string): AppError => {
   );
 };
 
-export const handleNetworkError = (error: unknown, context: string): AppError => {
+export const handleNetworkError = (error: unknown, context: string, logger?: Logger): AppError => {
   if (error instanceof AppError) {
     return error;
   }
@@ -75,7 +75,7 @@ export const handleNetworkError = (error: unknown, context: string): AppError =>
   );
 };
 
-export const logError = (error: unknown, context: string): void => {
+export const logError = (error: unknown, context: string, logger: Logger = createDefaultLogger()): void => {
   if (error instanceof AppError) {
     logger.error(`[${error.type}] ${error.message}`, { context, originalError: error.originalError });
   } else if (error instanceof Error) {

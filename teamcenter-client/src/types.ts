@@ -1,3 +1,5 @@
+import { Logger } from './logger.js';
+
 // Teamcenter SOA API types
 export interface TCCredentials {
   username: string;
@@ -174,4 +176,21 @@ export interface TCLoginResponse {
   };
   PartialErrors?: any;
   [key: string]: any;
+}
+
+// New types for the refactored client
+
+// Configuration for the Teamcenter client
+export interface TeamcenterConfig {
+  endpoint: string;
+  timeout?: number;
+  mockMode?: boolean;
+  headers?: Record<string, string>;
+  withCredentials?: boolean;
+}
+
+// Options for creating a TeamcenterService instance
+export interface TeamcenterServiceOptions {
+  logger?: Logger;
+  config: TeamcenterConfig;
 }

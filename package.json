@@ -19,6 +19,7 @@
     "@types/node": "^22.14.0",
     "axios": "^1.8.4",
     "dotenv": "^16.4.7",
+    "teamcenter-client": "^1.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "winston": "^3.17.0"

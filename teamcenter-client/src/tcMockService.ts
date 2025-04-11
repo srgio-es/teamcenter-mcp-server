@@ -1,12 +1,20 @@
 import { TCCredentials, TCSearchOptions, TCSearchResponse } from './types.js';
 import { AppError, ErrorType } from './tcErrors.js';
-import logger from '../logger.js';
+import { Logger, createDefaultLogger } from './logger.js';
 
-// Mock service implementation
+/**
+ * Mock service implementation for Teamcenter API
+ * @param service The service name
+ * @param operation The operation name
+ * @param params The operation parameters
+ * @param logger Optional logger instance
+ * @returns The mock response
+ */
 export const mockCallService = async (
   service: string, 
   operation: string, 
-  params: unknown
+  params: unknown,
+  logger: Logger = createDefaultLogger()
 ): Promise<unknown> => {
   // Generate a unique request ID for tracing
   const requestId = logger.logTeamcenterRequest(service, operation, params);
