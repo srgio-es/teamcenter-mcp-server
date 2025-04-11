@@ -1,4 +1,4 @@
-export default {
+module.exports = {
   parser: '@typescript-eslint/parser',
   extends: [
     'eslint:recommended',
@@ -23,5 +23,13 @@ export default {
     }],
     'no-console': ['warn', { allow: ['warn', 'error'] }],
   },
-  ignorePatterns: ['dist/', 'node_modules/', 'coverage/'],
+  ignorePatterns: ['build/', 'dist/', 'node_modules/', 'coverage/'],
+  overrides: [
+    {
+      files: ['teamcenter-client/**/*.ts'],
+      rules: {
+        // You can add specific rules for the teamcenter-client directory here if needed
+      }
+    }
+  ]
 };
