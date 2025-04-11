@@ -27,32 +27,56 @@ The Teamcenter MCP Server follows a layered architecture that separates concerns
    - Defines resources and tools
    - Handles request routing
    - Manages server lifecycle
+   - Implements error handling and logging
 
 2. **Teamcenter Service (teamcenterService.ts)**
    - Implements business logic for Teamcenter operations
    - Manages session state
    - Provides high-level API for Teamcenter operations
+   - Handles error categorization and standardization
+   - Implements request tracing with unique IDs
 
 3. **SOA Client (tcSOAClient.ts)**
    - Handles communication with Teamcenter REST API
    - Manages authentication and session tokens
    - Formats requests according to Teamcenter API specifications
+   - Implements request/response logging
 
 4. **API Service (tcApiService.ts)**
    - Alternative implementation for REST API communication
    - Used for specific API endpoints not covered by SOA
+   - Handles HTTP requests with proper error handling
+   - Supports request cancellation and timeouts
 
 5. **Mock Service (tcMockService.ts)**
    - Provides mock implementations for testing
    - Simulates Teamcenter responses
+   - Enables development without a real Teamcenter instance
+   - Configurable via MOCK_MODE environment variable
 
 6. **Response Parser (tcResponseParser.ts)**
    - Transforms Teamcenter API responses into standardized objects
    - Handles error cases and edge conditions
+   - Extracts relevant data from complex response structures
+   - Provides utility functions for property access
 
 7. **Utilities (tcUtils.ts)**
    - Provides helper functions
    - Manages session storage and retrieval
+   - Handles cookie-based session persistence
+   - Implements environment detection for cross-platform compatibility
+
+8. **Error Handling (tcErrors.ts)**
+   - Defines AppError class with specific error types
+   - Provides specialized error handling functions
+   - Implements error categorization and context
+   - Standardizes error responses
+
+9. **Logger (logger.ts)**
+   - Configures logging system
+   - Provides consistent logging interface
+   - Implements request tracing with unique IDs
+   - Supports different log levels and formats
 
 ## Key Technical Decisions
 
@@ -102,6 +126,24 @@ The server implements a comprehensive error handling strategy:
 - AppError class with error types for better categorization
 - Detailed logging with request IDs for traceability
 
+### 6. Modular Client Library
+
+The Teamcenter client is implemented as a separate library to:
+
+- Promote code reusability
+- Enable independent versioning and testing
+- Provide a clean API for Teamcenter operations
+- Allow for potential use in other projects
+
+### 7. Request Tracing
+
+The server implements request tracing with unique IDs to:
+
+- Track requests through the system
+- Correlate logs across different components
+- Simplify debugging and troubleshooting
+- Provide better visibility into system behavior
+
 ## Component Relationships
 
 ```mermaid
@@ -121,6 +163,10 @@ graph TD
     H --> C
     H --> D
     H --> E
+    I[Error Handling] --> B
+    I --> C
+    I --> D
+    I --> E
 ```
 
 ### Data Flow
@@ -142,7 +188,7 @@ graph TD
 
 3. **Error Flow**:
    - API errors are caught and transformed into TCResponse objects
-   - Errors are categorized by type (API_RESPONSE, DATA_PARSING, etc.)
+   - Errors are categorized by type (API_RESPONSE, DATA_PARSING, AUTH_SESSION, etc.)
    - MCP errors are mapped to appropriate error codes
    - Errors are logged with context information for debugging
    - User-friendly error messages are returned to Claude
@@ -210,6 +256,66 @@ mockTeamcenterService.searchItems = async (query, type, limit) => {
 };
 ```
 
+### 5. Singleton Pattern
+
+The teamcenterService is implemented as a singleton to maintain a single session with Teamcenter:
+
+```typescript
+// Singleton implementation
+export const createTeamcenterService = (options: TeamcenterServiceOptions): ITeamcenterService => {
+  return new TeamcenterService(options);
+};
+```
+
+### 6. Observer Pattern
+
+The logger implements an observer pattern to monitor and log events throughout the system:
+
+```typescript
+// Observer pattern for logging
+const loggerAdapter: Logger = {
+  error: (message, ...meta) => logger.error(message, ...meta),
+  warn: (message, ...meta) => logger.warn(message, ...meta),
+  info: (message, ...meta) => logger.info(message, ...meta),
+  debug: (message, ...meta) => logger.debug(message, ...meta),
+  logTeamcenterRequest: (service, operation, params, requestId) => {
+    const reqId = requestId || `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    logger.info(`[${reqId}] TC REQUEST: ${service}.${operation}`, { params });
+    return reqId;
+  },
+  logTeamcenterResponse: (service, operation, response, requestId, error) => {
+    if (error) {
+      logger.error(`[${requestId}] TC RESPONSE ERROR: ${service}.${operation}`, { error: error.message });
+    } else {
+      logger.info(`[${requestId}] TC RESPONSE: ${service}.${operation}`, { response });
+    }
+  }
+};
+```
+
+### 7. Command Pattern
+
+The MCP tools implement a command pattern to encapsulate operations as objects:
+
+```typescript
+// Command pattern for MCP tools
+this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  try {
+    switch (request.params.name) {
+      case 'search_items': {
+        // Command implementation
+      }
+      case 'get_item': {
+        // Command implementation
+      }
+      // Additional commands...
+    }
+  } catch (error) {
+    // Error handling
+  }
+});
+```
+
 ## Critical Implementation Paths
 
 ### 1. Authentication
@@ -234,6 +340,12 @@ MCP Server -> teamcenterService.createItem() -> SOAClient.callService() -> tcApi
 
 ```
 MCP Server -> ReadResourceRequestSchema handler -> URI pattern matching -> teamcenterService method -> SOAClient.callService() -> tcApiService.realCallService() -> Teamcenter API -> Raw Result -> JSON Response
+```
+
+### 5. User Operations
+
+```
+MCP Server -> teamcenterService.getUserProperties() -> getSessionInfo() -> SOAClient.callService() -> tcApiService.realCallService() -> Teamcenter API -> Raw Result -> tcResponseParser.parseJSONResponse() -> User Properties
 ```
 
 ## Performance Considerations
@@ -262,3 +374,9 @@ MCP Server -> ReadResourceRequestSchema handler -> URI pattern matching -> teamc
    - API calls have configurable timeouts to prevent hanging operations
    - AbortController is used for request cancellation
    - Timeout errors are properly categorized and reported
+
+6. **Logging Strategy**:
+   - Configurable log levels to control verbosity
+   - Request/response logging with unique IDs for traceability
+   - Structured logging with metadata for better analysis
+   - Sensitive information is masked in logs

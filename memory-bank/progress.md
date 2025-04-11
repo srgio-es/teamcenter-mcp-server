@@ -18,6 +18,7 @@
    - ✅ Automatic authentication on startup
    - ✅ Logout functionality
    - ✅ Session cookie handling
+   - ✅ Session information retrieval
 
 3. **Item Operations**:
    - ✅ Search for items with filtering
@@ -27,7 +28,13 @@
    - ✅ Get user-owned items
    - ✅ Get recently created items
 
-4. **Resource Access**:
+4. **User Operations**:
+   - ✅ Get user favorites
+   - ✅ Get user properties
+   - ✅ Get logged user properties
+   - ✅ Get session information
+
+5. **Resource Access**:
    - ✅ List available item types
    - ✅ Access item details by ID
    - ✅ Search for items by query
@@ -48,6 +55,12 @@
    - ✅ Memory Bank documentation
    - ✅ Code comments
    - ✅ Request/response logging
+
+3. **Error Handling**:
+   - ✅ AppError class with specific error types
+   - ✅ Standardized error responses
+   - ✅ Error logging with context
+   - ✅ Error categorization
 
 ## What's Left to Build
 
@@ -102,8 +115,8 @@ The Teamcenter MCP Server is currently in a functional implementation state. It 
 - Creating and updating items
 - Accessing Teamcenter resources
 - Session management
-- User-specific operations (user-owned items, recently created items)
-- Favorites management
+- User-specific operations (user-owned items, recently created items, favorites, user properties)
+- Error handling with specific error types and context
 
 The server is stable for basic operations but lacks some advanced features and optimizations. It is suitable for demonstration and initial use cases but may require enhancements for production use with complex Teamcenter instances.
 
@@ -114,8 +127,9 @@ The server is stable for basic operations but lacks some advanced features and o
 | MCP Server | Complete | Core functionality implemented |
 | Authentication | Complete | Login, session management working |
 | Item Operations | Complete | Search, retrieve, create, update working |
+| User Operations | Complete | Favorites, properties, session info working |
 | Resource Access | Complete | Item types, item details, search working |
-| Error Handling | Mostly Complete | Standardized error handling with specific error types |
+| Error Handling | Complete | Standardized error handling with specific error types |
 | Documentation | Complete | README and Memory Bank created |
 | Testing | Not Started | No automated tests yet |
 | Performance | Basic | No optimizations implemented yet |
@@ -192,14 +206,16 @@ The current approach has evolved to:
 3. Add better documentation and examples
 4. Ensure cross-environment compatibility
 5. Implement comprehensive logging and tracing
+6. Support user-specific operations
 
 Key changes:
-- Added more Teamcenter operations
-- Improved error handling with standardized responses and specific error types
+- Added more Teamcenter operations (user properties, favorites, session info)
+- Improved error handling with AppError class, specific error types, and standardized responses
 - Created comprehensive documentation
 - Enhanced configuration options
 - Fixed browser compatibility issues for Node.js environment
 - Added request/response logging with unique request IDs for traceability
+- Implemented a modular client library structure
 
 ### Future Direction (v2.0)
 
@@ -208,12 +224,14 @@ The planned future direction includes:
 1. Adding advanced Teamcenter features
 2. Improving user experience
 3. Enhancing security and performance
+4. Adding comprehensive testing
 
 Planned changes:
 - Support for workflows and document management
 - Enhanced response formatting
 - Caching and performance optimizations
 - More comprehensive testing
+- Automatic retry for transient errors
 
 ## Milestone History
 
@@ -249,13 +267,20 @@ Planned changes:
 - Improve error handling for cross-environment compatibility
 - Add client-level request tracing with unique request IDs
 
-### Milestone 5: Advanced Features (In Progress)
+### Milestone 5: User Operations (Completed)
+- Add get_session_info tool
+- Implement get_favorites tool
+- Add get_user_properties tool
+- Add get_logged_user_properties tool
+- Enhance error handling with AppError class and specific error types
+
+### Milestone 6: Advanced Features (In Progress)
 - Add workflow support
 - Implement document management
 - Enhance search capabilities
 - Add relationship management between items
 
-### Milestone 6: Production Readiness (Planned)
+### Milestone 7: Production Readiness (Planned)
 - Add comprehensive tests
 - Implement performance optimizations
 - Enhance security features

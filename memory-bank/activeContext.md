@@ -8,6 +8,8 @@ The Teamcenter MCP Server is currently in a functional state with core features 
 2. Exposes Teamcenter resources through MCP resource endpoints
 3. Provides tools for searching, retrieving, creating, and updating Teamcenter items
 4. Handles errors and edge cases appropriately
+5. Supports user-specific operations (user-owned items, recently created items, favorites)
+6. Provides session management and user information retrieval
 
 The current focus is on:
 
@@ -22,7 +24,7 @@ The current focus is on:
    - Implemented the core MCP server structure in index.ts
    - Set up resource and tool handlers
    - Added error handling and logging
-   - Added support for additional tools including get_session_info and get_favorites
+   - Added support for additional tools including get_session_info, get_favorites, get_user_properties, and get_logged_user_properties
    - Implemented comprehensive request/response logging with unique request IDs
 
 2. **Teamcenter Service Layer**:
@@ -30,6 +32,7 @@ The current focus is on:
    - Added methods for common Teamcenter operations
    - Implemented session management
    - Added dynamic method creation for missing service methods
+   - Added support for retrieving user properties and session information
 
 3. **SOA Client**:
    - Created a client for Teamcenter's SOA API
@@ -44,13 +47,19 @@ The current focus is on:
    - Created consistent object formats
    - Enhanced logging for API responses
 
-5. **Configuration**:
+5. **Error Handling**:
+   - Implemented AppError class with specific error types (API_RESPONSE, DATA_PARSING, AUTH_SESSION, etc.)
+   - Added specialized error handling functions for different error scenarios
+   - Improved error messages for better user understanding
+   - Enhanced error logging with context information
+
+6. **Configuration**:
    - Set up environment-based configuration
    - Added support for .env files for local development
    - Documented configuration options
    - Added mock mode toggle for testing without Teamcenter
 
-6. **Browser Compatibility Fix**:
+7. **Browser Compatibility Fix**:
    - Fixed browser-specific code in Node.js environment
    - Added environment detection for document and window objects
    - Modified fetch API usage to work in both browser and Node.js
@@ -111,14 +120,19 @@ The current focus is on:
    - Trade-offs: Less flexibility for multiple sessions, but better resource utilization
 
 2. **Error Handling Strategy**:
-   - Decision: Use standardized TCResponse objects with error information
-   - Rationale: Provides consistent error handling across the application
-   - Trade-offs: Adds some overhead but improves maintainability
+   - Decision: Use standardized TCResponse objects with error information and AppError class with specific error types
+   - Rationale: Provides consistent error handling across the application with better categorization
+   - Trade-offs: Adds some overhead but improves maintainability and debugging
 
 3. **Configuration Approach**:
    - Decision: Use environment variables for configuration
    - Rationale: Separates configuration from code, supports different environments
    - Trade-offs: Requires proper environment setup but improves security
+
+4. **Request Tracing**:
+   - Decision: Add unique request IDs to all API calls
+   - Rationale: Improves traceability and debugging
+   - Trade-offs: Adds some overhead but significantly improves troubleshooting
 
 ### Technical Debt
 
@@ -165,6 +179,7 @@ The current focus is on:
 3. **Error Handling**:
    - Use try/catch blocks for all external API calls
    - Return standardized TCResponse objects with error information
+   - Use AppError class with specific error types for better categorization
    - Log errors for debugging but don't expose sensitive information
 
 ### API Design Principles
@@ -173,6 +188,7 @@ The current focus is on:
    - All service methods follow the same pattern
    - All methods return TCResponse objects
    - All errors are handled consistently
+   - All requests are traced with unique IDs
 
 2. **Simplicity**:
    - Expose simplified interfaces to complex Teamcenter operations
@@ -183,6 +199,7 @@ The current focus is on:
    - Validate inputs before making API calls
    - Handle edge cases and error conditions
    - Provide meaningful error messages
+   - Log all requests and responses for traceability
 
 ## Learnings and Project Insights
 
@@ -198,6 +215,7 @@ The current focus is on:
    - MCP resources must be representable as UTF-8 text
    - Tool inputs must be JSON-serializable
    - Error handling must be mapped to MCP error codes
+   - Request tracing is essential for debugging
 
 3. **Authentication Challenges**:
    - Teamcenter uses session-based authentication
@@ -227,3 +245,4 @@ The current focus is on:
    - Prioritize robust error handling from the start
    - Error messages should be user-friendly
    - Errors should provide actionable information
+   - Error categorization improves debugging and analysis

@@ -60,6 +60,12 @@
    - Configured via tsconfig.json
    - Strict type checking for code safety
 
+6. **winston** (v3.17.0)
+   - Logging library for Node.js
+   - Supports multiple log levels
+   - Configurable transports for log output
+   - Structured logging with metadata
+
 ## Development Setup
 
 ### Project Structure
@@ -68,17 +74,26 @@
 teamcenter-mcp-server/
 ├── .env                  # Environment variables for local development
 ├── index.ts              # Main entry point and MCP server implementation
+├── logger.ts             # Logging configuration
 ├── package.json          # Project dependencies and scripts
 ├── tsconfig.json         # TypeScript configuration
 ├── build/                # Compiled JavaScript output
-└── teamcenter/           # Teamcenter service modules
-    ├── tcApiService.ts   # REST API client implementation
-    ├── tcMockService.ts  # Mock service for testing
-    ├── tcResponseParser.ts # Response transformation utilities
-    ├── tcSOAClient.ts    # SOA client implementation
-    ├── tcUtils.ts        # Utility functions
-    ├── teamcenterService.ts # Main service implementation
-    └── types.ts          # TypeScript type definitions
+├── logs/                 # Log files directory
+└── teamcenter-client/    # Teamcenter client library
+    ├── package.json      # Client library dependencies
+    ├── tsconfig.json     # Client library TypeScript configuration
+    ├── README.md         # Client library documentation
+    └── src/              # Client library source code
+        ├── index.ts      # Main exports
+        ├── logger.ts     # Logging interface
+        ├── tcApiService.ts   # REST API client implementation
+        ├── tcErrors.ts   # Error handling utilities
+        ├── tcMockService.ts  # Mock service for testing
+        ├── tcResponseParser.ts # Response transformation utilities
+        ├── tcSOAClient.ts    # SOA client implementation
+        ├── tcUtils.ts        # Utility functions
+        ├── teamcenterService.ts # Main service implementation
+        └── types.ts          # TypeScript type definitions
 ```
 
 ### Build Process
@@ -106,6 +121,7 @@ teamcenter-mcp-server/
      TEAMCENTER_BASE_URL=https://teamcenter.example.com/api
      TEAMCENTER_USERNAME=your_username
      TEAMCENTER_PASSWORD=your_password
+     MOCK_MODE=false
      ```
 
 2. **MCP Configuration**:
@@ -119,7 +135,8 @@ teamcenter-mcp-server/
            "env": {
              "TEAMCENTER_BASE_URL": "YOUR_TEAMCENTER_BASE_URL",
              "TEAMCENTER_USERNAME": "YOUR_TEAMCENTER_USERNAME",
-             "TEAMCENTER_PASSWORD": "YOUR_TEAMCENTER_PASSWORD"
+             "TEAMCENTER_PASSWORD": "YOUR_TEAMCENTER_PASSWORD",
+             "MOCK_MODE": "false"
            },
            "disabled": false,
            "autoApprove": []
@@ -200,7 +217,17 @@ teamcenter-mcp-server/
 | @types/node | ^22.14.0 | TypeScript definitions for Node.js |
 | axios | ^1.8.4 | HTTP client for API requests |
 | dotenv | ^16.4.7 | Environment variable management |
+| teamcenter-client | ^1.0.0 | Teamcenter client library |
 | ts-node | ^10.9.2 | TypeScript execution environment |
+| typescript | ^5.8.3 | TypeScript compiler |
+| winston | ^3.17.0 | Logging library |
+
+### Client Library Dependencies
+
+| Dependency | Version | Purpose |
+|------------|---------|---------|
+| axios | ^1.8.4 | HTTP client for API requests |
+| @types/node | ^22.14.0 | TypeScript definitions for Node.js |
 | typescript | ^5.8.3 | TypeScript compiler |
 
 ### External Dependencies
@@ -229,7 +256,7 @@ this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       const itemId = decodeURIComponent(match[1]);
       
       // Call service method
-      const response = await typedTeamcenterService.getItemById(itemId);
+      const response = await teamcenterService.getItemById(itemId);
       
       // Handle errors
       if (response.error) {
@@ -279,7 +306,7 @@ this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
         
         // Call service method
-        const response = await typedTeamcenterService.searchItems(query, type, limit);
+        const response = await teamcenterService.searchItems(query, type, limit);
         
         // Handle errors
         if (response.error) {
@@ -295,37 +322,6 @@ this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
         
         // Return formatted response
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
-        };
-      }
-      
-      case 'get_item': {
-        const { id } = request.params.arguments as { id: string };
-        
-        if (!id) {
-          throw new McpError(ErrorCode.InvalidParams, 'Item ID is required');
-        }
-        
-        const response = await typedTeamcenterService.getItemById(id);
-        
-        if (response.error) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Failed to get item: ${response.error.message}`,
-              },
-            ],
-            isError: true,
-          };
-        }
-        
         return {
           content: [
             {
@@ -365,11 +361,26 @@ this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
 ```typescript
 // Teamcenter API call pattern
 async searchItems(query: string, type?: string, limit: number = 10): Promise<TCResponse<TCObject[]>> {
+  const serviceRequestId = `service_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  this.logger.debug(`[${serviceRequestId}] TeamcenterService.searchItems called with query: ${query}, type: ${type}, limit: ${limit}`);
+  
+  // Check if user is logged in
+  if (!this.isLoggedIn()) {
+    this.logger.debug(`[${serviceRequestId}] TeamcenterService.searchItems failed: No session`);
+    return this.createNotLoggedInError('searchItems');
+  }
+  
   try {
-    // Create SOA client
-    const soaClient = createSOAClient(teamcenterConfig);
+    if (!this.soaClient) {
+      throw new AppError(
+        'SOA client is not initialized',
+        ErrorType.UNKNOWN,
+        null,
+        { method: 'searchItems' }
+      );
+    }
     
-    // Build request parameters
+    // Build search criteria
     const searchOptions: TCSearchOptions = {
       searchInput: {
         providerName: "Fnd0BaseProvider",
@@ -399,7 +410,6 @@ async searchItems(query: string, type?: string, limit: number = 10): Promise<TCR
       }
     };
     
-    // Add type filter if provided
     if (type) {
       searchOptions.searchInput.searchFilterMap = {
         "Item Type": [{
@@ -416,18 +426,19 @@ async searchItems(query: string, type?: string, limit: number = 10): Promise<TCR
       };
     }
     
-    // Make API call
-    const result = await soaClient.callService(
+    const result = await this.soaClient.callService(
       'Query-2012-10-Finder',
       'performSearch',
       searchOptions
-    );
+    ) as TCSearchResponse;
     
-    // Return successful response
-    return { data: result as unknown as TCObject[] };
+    // Convert the results to TCObject format
+    const tcObjects = result.objects?.map(obj => convertToTCObject(obj, this.logger)) || [];
+    
+    this.logger.debug(`[${serviceRequestId}] TeamcenterService.searchItems successful: ${tcObjects.length} items found`);
+    return { data: tcObjects };
   } catch (error) {
-    // Return error response
-    logger.error('Error searching items:', error);
+    this.logger.error(`[${serviceRequestId}] Error searching items:`, error);
     return {
       error: {
         code: 'SEARCH_ERROR',
@@ -445,7 +456,7 @@ async searchItems(query: string, type?: string, limit: number = 10): Promise<TCR
 // Error handling pattern with AppError class
 try {
   // Operation that might fail
-  const response = await typedTeamcenterService.getItemById(id);
+  const response = await teamcenterService.getItemById(id);
   
   // Check for service-level errors
   if (response.error) {
@@ -503,4 +514,68 @@ try {
     ],
     isError: true,
   };
+}
+```
+
+### Request Tracing
+
+```typescript
+// Request tracing pattern
+const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+logger.info(`[${requestId}] TC REQUEST: ${service}.${operation}`, { params });
+
+try {
+  const result = await realCallService(service, operation, params, endpoint, sessionId, timeout, headers, withCredentials, mode);
+  logger.info(`[${requestId}] TC RESPONSE: ${service}.${operation}`, { response: result });
+  return result;
+} catch (error) {
+  logger.error(`[${requestId}] TC RESPONSE ERROR: ${service}.${operation}`, { error: error.message });
+  throw error;
+}
+```
+
+### Session Management
+
+```typescript
+// Session management pattern
+export function storeSession(session: TCSession, logger?: Logger): void {
+  try {
+    if (!session || !session.sessionId) {
+      if (logger) logger.warn('Cannot store invalid session');
+      return;
+    }
+    
+    // Store session in memory
+    currentSession = session;
+    
+    // Store session cookie for persistence
+    storeSessionCookie(session.sessionId, logger);
+    
+    if (logger) logger.debug('Session stored successfully');
+  } catch (error) {
+    if (logger) logger.error('Error storing session:', error);
+  }
+}
+
+export function retrieveSession(logger?: Logger): TCSession | null {
+  try {
+    // If we have a session in memory, use it
+    if (currentSession && currentSession.sessionId) {
+      if (logger) logger.debug('Retrieved session from memory');
+      return currentSession;
+    }
+    
+    // Otherwise, try to get from cookie
+    const sessionId = getSessionCookie(logger);
+    if (sessionId) {
+      if (logger) logger.debug('Retrieved session from cookie');
+      return { sessionId, userId: '', userName: '' };
+    }
+    
+    if (logger) logger.debug('No session found');
+    return null;
+  } catch (error) {
+    if (logger) logger.error('Error retrieving session:', error);
+    return null;
+  }
 }
