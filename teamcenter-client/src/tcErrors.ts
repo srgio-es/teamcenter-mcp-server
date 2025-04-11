@@ -23,7 +23,7 @@ export class AppError extends Error {
   }
 }
 
-export const handleApiError = (error: unknown, context: string, logger?: Logger): AppError => {
+export const handleApiError = (error: unknown, context: string, _logger?: Logger): AppError => {
   if (error instanceof AppError) {
     return error;
   }
@@ -36,7 +36,7 @@ export const handleApiError = (error: unknown, context: string, logger?: Logger)
   );
 };
 
-export const handleDataError = (error: unknown, context: string, logger?: Logger): AppError => {
+export const handleDataError = (error: unknown, context: string, _logger?: Logger): AppError => {
   if (error instanceof AppError) {
     return error;
   }
@@ -49,7 +49,7 @@ export const handleDataError = (error: unknown, context: string, logger?: Logger
   );
 };
 
-export const handleAuthError = (error: unknown, context: string, logger?: Logger): AppError => {
+export const handleAuthError = (error: unknown, context: string, _logger?: Logger): AppError => {
   if (error instanceof AppError) {
     return error;
   }
@@ -62,7 +62,7 @@ export const handleAuthError = (error: unknown, context: string, logger?: Logger
   );
 };
 
-export const handleNetworkError = (error: unknown, context: string, logger?: Logger): AppError => {
+export const handleNetworkError = (error: unknown, context: string, _logger?: Logger): AppError => {
   if (error instanceof AppError) {
     return error;
   }

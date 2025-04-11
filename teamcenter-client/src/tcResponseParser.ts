@@ -1,5 +1,5 @@
-import { TCItem, TCPropertyInfo, TCSearchResponse, TCObject, TCSession } from './types.js';
-import { AppError, ErrorType, handleDataError } from './tcErrors.js';
+import { TCItem, TCSearchResponse, TCObject, TCSession } from './types.js';
+import { handleDataError } from './tcErrors.js';
 import { Logger, createDefaultLogger } from './logger.js';
 
 /**

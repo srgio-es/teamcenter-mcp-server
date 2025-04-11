@@ -63,7 +63,7 @@ const logTeamcenterRequest = (service: string, operation: string, params: unknow
   const reqId = requestId || `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   
   // Mask sensitive data like passwords
-  let sanitizedParams = JSON.parse(JSON.stringify(params || {}));
+  const sanitizedParams = JSON.parse(JSON.stringify(params || {}));
   if (service === 'Core-2011-06-Session' && operation === 'login') {
     if (sanitizedParams.credentials?.password) {
       sanitizedParams.credentials.password = '***';

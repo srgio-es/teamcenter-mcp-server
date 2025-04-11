@@ -1,4 +1,4 @@
-import { TCCredentials, TCSearchOptions, TCSearchResponse } from './types.js';
+// Removed unused imports
 import { AppError, ErrorType } from './tcErrors.js';
 import { Logger, createDefaultLogger } from './logger.js';
 

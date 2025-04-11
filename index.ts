@@ -16,15 +16,8 @@ import logger from './logger.js';
 // Import from teamcenter-client package
 import {
   createTeamcenterService,
-  TeamcenterService,
   TCCredentials,
-  TCSearchOptions,
-  TCSearchResponse,
-  TCObject,
-  TCResponse,
-  Logger,
-  AppError,
-  ErrorType
+  Logger
 } from 'teamcenter-client';
 
 // Load environment variables from .env file for local testing

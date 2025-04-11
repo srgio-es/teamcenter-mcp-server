@@ -173,7 +173,7 @@ export const createJSONRequest = (
     };
     
     // Create the envelope structure with header and body
-    let requestEnvelope: Record<string, unknown> = {
+    const requestEnvelope: Record<string, unknown> = {
       header: header,
       body: {}
     };

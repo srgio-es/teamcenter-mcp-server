@@ -10,9 +10,9 @@ import {
   ITeamcenterService
 } from './types.js';
 import { storeSession, retrieveSession, clearSession, isValidSession } from './tcUtils.js';
-import { convertToTCObject, getPropertyValue } from './tcResponseParser.js';
+import { convertToTCObject } from './tcResponseParser.js';
 import { SOAClient, createSOAClient } from './tcSOAClient.js';
-import { AppError, ErrorType, handleApiError } from './tcErrors.js';
+import { AppError, ErrorType } from './tcErrors.js';
 import { Logger, createDefaultLogger } from './logger.js';
 
 /**
@@ -81,7 +81,7 @@ export class TeamcenterService implements ITeamcenterService {
    * @param method The method name that was called
    * @returns A standardized error response
    */
-  private createNotLoggedInError(method: string): TCResponse<any> {
+  private createNotLoggedInError(_method: string): TCResponse<any> {
     return {
       error: {
         code: 'NO_SESSION',
