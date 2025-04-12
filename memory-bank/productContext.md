@@ -25,7 +25,7 @@ The Teamcenter MCP Server bridges this gap by enabling direct interaction with T
 
 ### User Experience Flow
 
-1. **Authentication**: The user configures their Teamcenter credentials in the MCP settings file. The server authenticates with Teamcenter on startup.
+1. **Authentication**: The user configures their Teamcenter credentials in the MCP settings file. The server authenticates with Teamcenter on startup. // THIS IS NOT RIGHT. AUTHENTICATION IS PERFORMED WITH THE TOOL LOGIN. Logout is performed with the tool LOGOUT.
 
 2. **Resource Access**: Users can request Teamcenter resources through Claude using the `access_mcp_resource` command with URIs like:
    - `teamcenter://item-types` - List available item types
@@ -33,11 +33,11 @@ The Teamcenter MCP Server bridges this gap by enabling direct interaction with T
    - `teamcenter://search/{query}` - Search for items
 
 3. **Tool Usage**: Users can perform actions in Teamcenter through Claude using the `use_mcp_tool` command with tools like:
-   - `search_items` - Search for items with optional filtering
-   - `get_item` - Retrieve detailed information about an item
-   - `create_item` - Create a new item in Teamcenter
-   - `update_item` - Update properties of an existing item
-   - `get_item_types` - List available item types
+   - `search_items` - Search for items with optional filtering // NOT WORKING
+   - `get_item` - Retrieve detailed information about an item // NOT WORKING
+   - `create_item` - Create a new item in Teamcenter  // NOT WORKING
+   - `update_item` - Update properties of an existing item  // NOT WORKING
+   - `get_item_types` - List available item types  // NOT WORKING
 
 4. **Results Presentation**: Claude presents the results in a user-friendly format, explaining the data and offering suggestions for next steps.
 

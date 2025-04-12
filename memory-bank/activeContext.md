@@ -13,76 +13,86 @@ The Teamcenter MCP Server is currently in a functional state with core features 
 
 The current focus is on:
 
-1. **Documentation**: Creating comprehensive documentation for the server, including this Memory Bank
-2. **Testing**: Implementing automated tests for all functionality with Jest
-3. **CI/CD**: Setting up GitHub Actions for continuous integration
-4. **Error Handling**: Improving error handling and recovery mechanisms
-5. **User Experience**: Refining the response formats to be more user-friendly
+1. **Code Organization**: Refactoring the codebase to use the Command pattern for better maintainability
+2. **Documentation**: Creating comprehensive documentation for the server, including this Memory Bank
+3. **Testing**: Implementing automated tests for all functionality with Jest
+4. **CI/CD**: Setting up GitHub Actions for continuous integration
+5. **Error Handling**: Improving error handling and recovery mechanisms
+6. **User Experience**: Refining the response formats to be more user-friendly
 
 ## Recent Changes
 
-1. **Testing Implementation**:
+1. **Command Pattern Implementation**:
+   - Refactored teamcenterService.ts to use the Command pattern
+   - Created a Command interface and BaseCommand abstract class
+   - Implemented a CommandExecutor for executing commands
+   - Created separate command classes for each operation (login, logout, search, etc.)
+   - Organized commands into logical directories (auth, item, search, user, session)
+   - Updated index.ts to export all command classes
+   - Improved error handling in commands
+
+2. **Testing Implementation**:
    - Added Jest testing framework for both main server and client library
    - Created test configuration files (jest.config.js)
    - Implemented initial tests for core functionality
    - Set up test mocks for external dependencies
    - Added test coverage reporting
 
-2. **CI/CD Setup**:
+3. **CI/CD Setup**:
    - Created GitHub Actions workflow for continuous integration
    - Configured CI to run on push to main and pull requests
    - Set up linting, building, and testing in the CI pipeline
    - Added coverage reporting to Codecov
 
-3. **Code Quality Tools**:
+4. **Code Quality Tools**:
    - Added ESLint for TypeScript code linting
    - Created ESLint configuration files for both projects
    - Added npm scripts for linting and fixing issues
 
-4. **Documentation**:
+5. **Documentation**:
    - Created TESTING.md with detailed information about testing and CI
    - Updated code to support better testability (e.g., exporting TeamcenterServer class)
 
-5. **MCP Server Implementation**:
+6. **MCP Server Implementation**:
    - Implemented the core MCP server structure in index.ts
    - Set up resource and tool handlers
    - Added error handling and logging
    - Added support for additional tools including get_session_info, get_favorites, get_user_properties, and get_logged_user_properties
    - Implemented comprehensive request/response logging with unique request IDs
 
-6. **Teamcenter Service Layer**:
-   - Implemented the teamcenterService as a singleton
+7. **Teamcenter Service Layer**:
+   - Refactored teamcenterService to use the Command pattern
+   - Implemented the service as a facade for command execution
    - Added methods for common Teamcenter operations
    - Implemented session management
-   - Added dynamic method creation for missing service methods
    - Added support for retrieving user properties and session information
 
-7. **SOA Client**:
+8. **SOA Client**:
    - Created a client for Teamcenter's SOA API
    - Implemented authentication and session handling
    - Added request/response formatting
    - Improved session cookie management
    - Added client-level request tracing with unique IDs
 
-8. **Response Parsing**:
+9. **Response Parsing**:
    - Added utilities to transform Teamcenter responses
    - Standardized error handling
    - Created consistent object formats
    - Enhanced logging for API responses
 
-9. **Error Handling**:
-   - Implemented AppError class with specific error types (API_RESPONSE, DATA_PARSING, AUTH_SESSION, etc.)
-   - Added specialized error handling functions for different error scenarios
-   - Improved error messages for better user understanding
-   - Enhanced error logging with context information
+10. **Error Handling**:
+    - Implemented AppError class with specific error types (API_RESPONSE, DATA_PARSING, AUTH_SESSION, etc.)
+    - Added specialized error handling functions for different error scenarios
+    - Improved error messages for better user understanding
+    - Enhanced error logging with context information
 
-10. **Configuration**:
+11. **Configuration**:
     - Set up environment-based configuration
     - Added support for .env files for local development
     - Documented configuration options
     - Added mock mode toggle for testing without Teamcenter
 
-11. **Browser Compatibility Fix**:
+12. **Browser Compatibility Fix**:
     - Fixed browser-specific code in Node.js environment
     - Added environment detection for document and window objects
     - Modified fetch API usage to work in both browser and Node.js
@@ -93,6 +103,7 @@ The current focus is on:
 ### Short-term Tasks
 
 1. **Enhanced Testing**:
+   - Add tests for the new command classes
    - Add more comprehensive tests for all components
    - Increase test coverage to at least 80%
    - Add integration tests for key workflows
@@ -143,32 +154,38 @@ The current focus is on:
 
 ### Architecture Decisions
 
-1. **Singleton Service Pattern**:
+1. **Command Pattern Implementation**:
+   - Decision: Refactor teamcenterService to use the Command pattern
+   - Rationale: Improves code organization, maintainability, and testability
+   - Trade-offs: Adds some complexity but significantly improves code structure
+   - Benefits: Each command is self-contained, easier to test, and easier to extend
+
+2. **Singleton Service Pattern**:
    - Decision: Implement teamcenterService as a singleton
    - Rationale: Maintains a single session with Teamcenter, simplifies state management
    - Trade-offs: Less flexibility for multiple sessions, but better resource utilization
 
-2. **Error Handling Strategy**:
+3. **Error Handling Strategy**:
    - Decision: Use standardized TCResponse objects with error information and AppError class with specific error types
    - Rationale: Provides consistent error handling across the application with better categorization
    - Trade-offs: Adds some overhead but improves maintainability and debugging
 
-3. **Configuration Approach**:
+4. **Configuration Approach**:
    - Decision: Use environment variables for configuration
    - Rationale: Separates configuration from code, supports different environments
    - Trade-offs: Requires proper environment setup but improves security
 
-4. **Request Tracing**:
+5. **Request Tracing**:
    - Decision: Add unique request IDs to all API calls
    - Rationale: Improves traceability and debugging
    - Trade-offs: Adds some overhead but significantly improves troubleshooting
 
-5. **Testing Strategy**:
+6. **Testing Strategy**:
    - Decision: Use Jest with TypeScript for testing
    - Rationale: Provides a modern testing framework with good TypeScript support
    - Trade-offs: Requires additional configuration for ESM support but offers better developer experience
 
-6. **CI/CD Approach**:
+7. **CI/CD Approach**:
    - Decision: Use GitHub Actions for CI/CD
    - Rationale: Tight integration with GitHub, easy to configure, and free for public repositories
    - Trade-offs: Limited to GitHub ecosystem but sufficient for project needs
@@ -190,6 +207,7 @@ The current focus is on:
 
 3. **Testing Coverage**:
    - Initial tests implemented but coverage is not comprehensive
+   - Need to add tests for the new command classes
    - Need to add more tests for edge cases and error scenarios
    - Plan to implement integration tests with mock Teamcenter server
    - Add unit tests for utility functions and core logic
@@ -205,23 +223,31 @@ The current focus is on:
 
 ### Code Organization
 
-1. **Module Structure**:
+1. **Command Pattern**:
+   - Each operation is implemented as a separate command class
+   - Commands are organized into logical directories (auth, item, search, user, session)
+   - All commands implement the Command interface
+   - Most commands extend the BaseCommand abstract class
+   - Commands are executed by a CommandExecutor
+
+2. **Module Structure**:
    - Each module has a single responsibility
    - Related functionality is grouped together
    - Interfaces are defined in types.ts
 
-2. **Naming Conventions**:
+3. **Naming Conventions**:
    - Prefix Teamcenter-related types with TC (e.g., TCObject, TCResponse)
    - Use descriptive names for functions and variables
    - Follow camelCase for variables and functions, PascalCase for types and classes
+   - Command classes are named with the action they perform (e.g., LoginCommand, SearchItemsCommand)
 
-3. **Error Handling**:
+4. **Error Handling**:
    - Use try/catch blocks for all external API calls
    - Return standardized TCResponse objects with error information
    - Use AppError class with specific error types for better categorization
    - Log errors for debugging but don't expose sensitive information
 
-4. **Testing Patterns**:
+5. **Testing Patterns**:
    - Use descriptive test names following the pattern "should [expected behavior]"
    - Group related tests using describe blocks
    - Mock external dependencies to isolate the code being tested
@@ -256,31 +282,38 @@ The current focus is on:
 
 ### Technical Insights
 
-1. **Teamcenter API Complexity**:
+1. **Command Pattern Benefits**:
+   - Improved code organization and maintainability
+   - Better separation of concerns
+   - Easier to test individual operations
+   - More flexible and extensible architecture
+   - Reduced complexity in the main service class
+
+2. **Teamcenter API Complexity**:
    - Teamcenter's SOA API has a complex structure
    - Operations are grouped by service and operation names
    - Request/response formats vary significantly between operations
    - Response parsing requires service and operation-specific handling
 
-2. **MCP Protocol Considerations**:
+3. **MCP Protocol Considerations**:
    - MCP resources must be representable as UTF-8 text
    - Tool inputs must be JSON-serializable
    - Error handling must be mapped to MCP error codes
    - Request tracing is essential for debugging
 
-3. **Authentication Challenges**:
+4. **Authentication Challenges**:
    - Teamcenter uses session-based authentication
    - Sessions expire after periods of inactivity
    - Need to handle re-authentication gracefully
    - Session cookies must be properly managed for persistent authentication
 
-4. **Environment Compatibility**:
+5. **Environment Compatibility**:
    - Node.js and browser environments have different APIs
    - Browser-specific objects like document and window are not available in Node.js
    - Need to check for environment type before using environment-specific APIs
    - Fetch API implementation differs between environments
 
-5. **Testing in ESM Environment**:
+6. **Testing in ESM Environment**:
    - Jest requires special configuration for ESM support
    - Need to use the --experimental-vm-modules flag
    - Import mocking works differently in ESM

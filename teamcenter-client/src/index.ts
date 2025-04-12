@@ -14,6 +14,34 @@ export { TeamcenterService, createTeamcenterService } from './teamcenterService.
 export type { SOAClient } from './tcSOAClient.js';
 export { createSOAClient } from './tcSOAClient.js';
 
+// Export Command pattern classes
+export type { Command } from './commands/Command.js';
+export { BaseCommand } from './commands/Command.js';
+export { CommandExecutor } from './commands/CommandExecutor.js';
+
+// Export Auth commands
+export { LoginCommand } from './commands/auth/LoginCommand.js';
+export { LogoutCommand } from './commands/auth/LogoutCommand.js';
+
+// Export Session commands
+export { GetSessionInfoCommand } from './commands/session/GetSessionInfoCommand.js';
+export { GetFavoritesCommand } from './commands/session/GetFavoritesCommand.js';
+
+// Export User commands
+export { GetUserPropertiesCommand } from './commands/user/GetUserPropertiesCommand.js';
+export { GetLoggedUserPropertiesCommand } from './commands/user/GetLoggedUserPropertiesCommand.js';
+
+// Export Item commands
+export { GetItemTypesCommand } from './commands/item/GetItemTypesCommand.js';
+export { GetItemByIdCommand } from './commands/item/GetItemByIdCommand.js';
+export { CreateItemCommand } from './commands/item/CreateItemCommand.js';
+export { UpdateItemCommand } from './commands/item/UpdateItemCommand.js';
+
+// Export Search commands
+export { SearchItemsCommand } from './commands/search/SearchItemsCommand.js';
+export { GetUserOwnedItemsCommand } from './commands/search/GetUserOwnedItemsCommand.js';
+export { GetLastCreatedItemsCommand } from './commands/search/GetLastCreatedItemsCommand.js';
+
 // Export types
 export type {
   TCCredentials,

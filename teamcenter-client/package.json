@@ -11,7 +11,11 @@
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix"
+    "lint:fix": "eslint . --ext .ts --fix",
+    "lint:check": "eslint . --ext .ts --check",
+    "prettier": "prettier --write '**/*.{ts,js,json,md}'",
+    "prettier:check": "prettier --check '**/*.{ts,js,json,md}'",
+    "prettier:fix": "prettier --write '**/*.{ts,js,json,md}'"
   },
   "keywords": ["teamcenter", "plm", "client"],
   "author": "",
