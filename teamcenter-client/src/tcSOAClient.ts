@@ -1,5 +1,5 @@
 import { TCSOAClientConfig } from './types.js';
-import { realCallService } from './tcApiService.js';
+import { callService } from './tcApiService.js';
 import { mockCallService } from './tcMockService.js';
 import { storeSessionCookie, getSessionCookie, storeSession } from './tcUtils.js';
 import { AppError, ErrorType, handleApiError } from './tcErrors.js';
@@ -79,7 +79,7 @@ export const createSOAClient = (
         // Use mock service if mockMode is enabled
         const result = config.mockMode 
           ? await mockCallService(service, operation, params, logger)
-          : await realCallService(config, sessionId, service, operation, params, logger);
+          : await callService(config, sessionId, service, operation, params, logger);
         
         // Add request tracing
         logger.debug(`[${clientRequestId}] SOA client call completed: ${service}.${operation}`);

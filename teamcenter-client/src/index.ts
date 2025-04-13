@@ -90,7 +90,7 @@ export {
 } from './tcResponseParser.js';
 
 // Export API service
-export { realCallService } from './tcApiService.js';
+export { callService } from './tcApiService.js';
 
 // Export mock service
 export { mockCallService } from './tcMockService.js';

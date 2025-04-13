@@ -14,7 +14,7 @@ import { Logger, createDefaultLogger } from './logger.js';
  * @param logger Optional logger instance
  * @returns The response data
  */
-export const realCallService = async (
+export const callService = async (
   config: TCSOAClientConfig,
   sessionId: string | null,
   service: string,
