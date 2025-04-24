@@ -2,8 +2,8 @@
   "name": "teamcenter-client",
   "version": "1.0.0",
   "description": "Client library for interacting with Teamcenter PLM systems",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "type": "module",
   "scripts": {
     "build": "tsc",
