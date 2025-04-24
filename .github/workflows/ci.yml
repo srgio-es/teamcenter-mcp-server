@@ -38,21 +38,26 @@ jobs:
     - name: Build
       run: npm run build
     
-    - name: Test
-      run: npm test
+    - name: Test with coverage
+      run: npm run test:coverage
       env:
         MOCK_MODE: 'true'
     
-    - name: Test client
-      run: cd teamcenter-client && npm test
-      env:
-        MOCK_MODE: 'true'
-    
+    - name: Merge coverage reports
+      run: |
+        mkdir -p ./merged-coverage
+        if [ -d "./coverage" ]; then
+          cp -r ./coverage/* ./merged-coverage/ || true
+        fi
+        if [ -d "./teamcenter-client/coverage" ]; then
+          cp -r ./teamcenter-client/coverage/* ./merged-coverage/ || true
+        fi
+        
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        directory: ./coverage/
+        directory: ./merged-coverage/
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: true
