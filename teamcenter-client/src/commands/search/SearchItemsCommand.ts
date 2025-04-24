@@ -64,12 +64,12 @@ export class SearchItemsCommand extends BaseCommand<TCObject[]> {
         );
       }
       
-      // Build search criteria with correct structure for Teamcenter API
+      // Build search criteria - Reverting to Finder service pattern
       const searchOptions: TCSearchOptions = {
         searchInput: {
-          providerName: "Awp0FullTextSearchProvider", // Changed provider for better text search
+          providerName: "Fnd0BaseProvider", // Reverted to base provider
           searchCriteria: {
-            searchString: this.query // Use searchString instead of Name for full text search
+            Name: this.query // Reverted to Name criteria for base provider
           },
           startIndex: 0,
           maxToReturn: this.limit,
@@ -99,7 +99,7 @@ export class SearchItemsCommand extends BaseCommand<TCObject[]> {
       
       if (this.type) {
         searchOptions.searchInput.searchFilterMap = {
-          "Type": [{ // Changed from "Item Type" to "Type" which is the standard filter name
+          "Item Type": [{ // Reverted filter key to "Item Type"
             searchFilterType: "StringFilter",
             stringValue: this.type,
             startDateValue: "",
@@ -116,8 +116,8 @@ export class SearchItemsCommand extends BaseCommand<TCObject[]> {
       this.logger.debug(`[${this.serviceRequestId}] Search options:`, JSON.stringify(searchOptions, null, 2));
       
       const result = await this.soaClient.callService(
-        'Query-2010-04-SavedQuery', // Updated service name to match Teamcenter API
-        'performSavedSearch', // Updated operation name to match Teamcenter API
+        'Query-2012-10-Finder', // Reverted service name
+        'performSearch', // Reverted operation name
         searchOptions
       ) as TCSearchResponse;
       
@@ -128,11 +128,28 @@ export class SearchItemsCommand extends BaseCommand<TCObject[]> {
       return { data: tcObjects };
     } catch (error) {
       this.logger.error(`[${this.serviceRequestId}] Error searching items:`, error);
+      
+      // Attempt to extract more specific error message from Teamcenter response
+      let specificMessage = 'Failed to search items';
+      if (error instanceof AppError && error.originalError) {
+        // Check if AppError wrapped an AxiosError or similar with response data
+        const responseData = (error.originalError as any)?.response?.data;
+        if (responseData?.ServiceData?.partialErrors?.[0]?.errorValues?.[0]?.message) {
+          specificMessage = responseData.ServiceData.partialErrors[0].errorValues[0].message;
+        } else if (responseData?.message) {
+          specificMessage = responseData.message;
+        } else if (error.originalError instanceof Error) {
+          specificMessage = error.originalError.message;
+        }
+      } else if (error instanceof Error) {
+        specificMessage = error.message;
+      }
+
       return {
         error: {
           code: 'SEARCH_ERROR',
           level: 'ERROR',
-          message: error instanceof Error ? error.message : 'Failed to search items'
+          message: specificMessage
         }
       };
     }
