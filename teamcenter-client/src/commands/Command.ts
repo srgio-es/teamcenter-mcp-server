@@ -21,7 +21,7 @@ export abstract class BaseCommand<T> implements Command<T> {
 
   abstract execute(): Promise<TCResponse<T>>;
 
-  protected createNotLoggedInError(method: string): TCResponse<T> {
+  protected createNotLoggedInError(_method: string): TCResponse<T> {
     return {
       error: {
         code: 'NO_SESSION',
