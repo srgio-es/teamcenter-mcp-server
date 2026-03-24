@@ -1,3 +1,5 @@
+#### UNDER DEVELOPMENT #### NOT FUNCTIONAL YET
+
 # Teamcenter MCP Server
 
 This is a Model Context Protocol (MCP) server that integrates with Teamcenter PLM using its REST API. It allows you to interact with Teamcenter data directly through Claude.
